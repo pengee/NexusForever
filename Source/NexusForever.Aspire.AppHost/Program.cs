@@ -1,4 +1,6 @@
 using System.Net;
+using Aspire.Hosting;
+using Aspire.Hosting.ApplicationModel;
 using NexusForever.Aspire.AppHost;
 using NexusForever.Database;
 using NexusForever.Network.Internal.Static;

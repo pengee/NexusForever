@@ -17,6 +17,8 @@ namespace NexusForever.GameTable
 
         private static readonly ILogger log = LogManager.GetCurrentClassLogger();
 
+        private Dictionary<string, IGameTable> tableLookup;
+
         [GameData]
         public GameTable<AccountCurrencyTypeEntry> AccountCurrencyType { get; private set; }
 
@@ -56,8 +58,13 @@ namespace NexusForever.GameTable
         public GameTable<BinkMovieSubtitleEntry> BinkMovieSubtitle { get; private set; }
         public GameTable<BugCategoryEntry> BugCategory { get; private set; }
         public GameTable<BugSubcategoryEntry> BugSubcategory { get; private set; }
+        [GameData]
         public GameTable<CCStateAdditionalDataEntry> CCStateAdditionalData { get; private set; }
+
+        [GameData]
         public GameTable<CCStateDiminishingReturnsEntry> CCStateDiminishingReturns { get; private set; }
+
+        [GameData]
         public GameTable<CCStatesEntry> CCStates { get; private set; }
         public GameTable<ChallengeEntry> Challenge { get; private set; }
         public GameTable<ChallengeTierEntry> ChallengeTier { get; private set; }
@@ -786,7 +793,24 @@ namespace NexusForever.GameTable
                 throw;
             }
 
+            BuildTableLookup();
+
             log.Info($"Loaded GameTables in {sw.ElapsedMilliseconds}ms.");
+        }
+
+        private void BuildTableLookup()
+        {
+            tableLookup = new Dictionary<string, IGameTable>();
+            foreach (PropertyInfo property in typeof(GameTableManager).GetProperties())
+            {
+                if (property.PropertyType.IsGenericType
+                    && property.PropertyType.GetGenericTypeDefinition() == typeof(GameTable<>))
+                {
+                    var table = (IGameTable)property.GetValue(this);
+                    if (table != null)
+                        tableLookup.Add(property.Name, table);
+                }
+            }
         }
 
         private async Task LoadGameTablesAsync(IEnumerable<PropertyInfo> properties)
@@ -921,5 +945,24 @@ namespace NexusForever.GameTable
                     throw new ArgumentOutOfRangeException();
             }
         }
+
+        /// <summary>
+        /// Return the <see cref="IGameTable"/> for the specified table property name, or null if not found.
+        /// </summary>
+        public IGameTable GetTable(string name)
+        {
+            if (tableLookup == null)
+                return null;
+
+            if (!tableLookup.TryGetValue(name, out IGameTable table))
+                return null;
+
+            return table;
+        }
+
+        /// <summary>
+        /// Returns the names of all loaded game tables.
+        /// </summary>
+        public IEnumerable<string> TableNames => tableLookup?.Keys;
     }
 }

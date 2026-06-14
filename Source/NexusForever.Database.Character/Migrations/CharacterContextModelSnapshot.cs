@@ -173,6 +173,50 @@ namespace NexusForever.Database.Character.Migrations
                     b.ToTable("character_bone", (string)null);
                 });
 
+            modelBuilder.Entity("NexusForever.Database.Character.Model.CharacterBuffModel", b =>
+                {
+                    b.Property<ulong>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint(20) unsigned")
+                        .HasDefaultValue(0ul)
+                        .HasColumnName("id");
+
+                    b.Property<uint>("Spell4BaseId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(10) unsigned")
+                        .HasDefaultValue(0u)
+                        .HasColumnName("spell4BaseId");
+
+                    b.Property<uint>("CasterGuid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(10) unsigned")
+                        .HasDefaultValue(0u)
+                        .HasColumnName("casterGuid");
+
+                    b.Property<uint>("StackCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int(10) unsigned")
+                        .HasDefaultValue(0u)
+                        .HasColumnName("stackCount");
+
+                    b.Property<double>("DurationRemaining")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("double")
+                        .HasDefaultValue(0d)
+                        .HasColumnName("durationRemaining");
+
+                    b.Property<double>("TickRemaining")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("double")
+                        .HasDefaultValue(0d)
+                        .HasColumnName("tickRemaining");
+
+                    b.HasKey("Id", "Spell4BaseId")
+                        .HasName("PRIMARY");
+
+                    b.ToTable("character_buff", (string)null);
+                });
+
             modelBuilder.Entity("NexusForever.Database.Character.Model.CharacterCostumeItemModel", b =>
                 {
                     b.Property<ulong>("Id")
@@ -2535,6 +2579,18 @@ namespace NexusForever.Database.Character.Migrations
                     b.Navigation("Character");
                 });
 
+            modelBuilder.Entity("NexusForever.Database.Character.Model.CharacterBuffModel", b =>
+                {
+                    b.HasOne("NexusForever.Database.Character.Model.CharacterModel", "Character")
+                        .WithMany("Buff")
+                        .HasForeignKey("Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_character_buff_id__character_id");
+
+                    b.Navigation("Character");
+                });
+
             modelBuilder.Entity("NexusForever.Database.Character.Model.CharacterCostumeItemModel", b =>
                 {
                     b.HasOne("NexusForever.Database.Character.Model.CharacterCostumeModel", "Costume")
@@ -2917,6 +2973,8 @@ namespace NexusForever.Database.Character.Migrations
                     b.Navigation("Appearance");
 
                     b.Navigation("Bone");
+
+                    b.Navigation("Buff");
 
                     b.Navigation("CharacterTitle");
 

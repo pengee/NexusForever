@@ -97,6 +97,26 @@ namespace NexusForever.Script.Template.Collection
             }
         }
 
+        public TOut? Invoke<TOut, TIn>(Func<TIn, TOut> func) where TOut : struct
+        {
+            foreach (IScriptInstanceInfo instanceInfo in scripts.Values)
+            {
+                if (!instanceInfo.ScriptInfo.Type.IsAssignableTo(typeof(TIn)))
+                    continue;
+
+                try
+                {
+                    return func.Invoke((TIn)instanceInfo.Script);
+                }
+                catch (Exception ex)
+                {
+                    log.LogError(ex, "An exception occured during invoke for script {Name} in collection {Id}!", instanceInfo.ScriptInfo.Name, Id);
+                }
+            }
+
+            return null;
+        }
+
         public IEnumerator<IScriptInstanceInfo> GetEnumerator()
         {
             return scripts.Values.GetEnumerator();

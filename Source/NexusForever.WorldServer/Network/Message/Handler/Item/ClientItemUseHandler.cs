@@ -37,22 +37,21 @@ namespace NexusForever.WorldServer.Network.Message.Handler.Item
             if (itemSpecial == null)
                 throw new InvalidPacketValueException();
 
-            if (itemSpecial.Spell4IdOnActivate > 0u)
+            if (itemSpecial.Spell4IdOnActivate <= 0u) { return; }
+            
+            if (itemSpecial.PrerequisiteIdGeneric00 > 0 && !prerequisiteManager.Meets(session.Player, itemSpecial.PrerequisiteIdGeneric00))
             {
-                if (itemSpecial.PrerequisiteIdGeneric00 > 0 && !prerequisiteManager.Meets(session.Player, itemSpecial.PrerequisiteIdGeneric00))
-                {
-                    session.Player.SendGenericError(GenericError.UnlockItemFailed); // TODO: Confirm right error message.
-                    return;
-                }
+                session.Player.SendGenericError(GenericError.UnlockItemFailed); // TODO: Confirm right error message.
+                return;
+            }
 
-                if (session.Player.Inventory.ItemUse(item))
+            if (session.Player.Inventory.ItemUse(item))
+            {
+                session.Player.CastSpell(itemSpecial.Spell4IdOnActivate, new SpellParameters
                 {
-                    session.Player.CastSpell(itemSpecial.Spell4IdOnActivate, new SpellParameters
-                    {
-                        PrimaryTargetId = itemUse.TargetUnitId,
-                        Position        = itemUse.Position
-                    });
-                }
+                    PrimaryTargetId = itemUse.TargetUnitId,
+                    TelegraphPositions = [itemUse.Position]
+                });
             }
         }
     }

@@ -1,12 +1,17 @@
 ﻿using System.Collections;
+using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using NexusForever.Database.Character;
 using NexusForever.Database.Character.Model;
 using NexusForever.Game.Abstract.Entity;
 using NexusForever.Game.Abstract.Quest;
+using NexusForever.Game.Static.Achievement;
+using NexusForever.Game.Static.Entity;
 using NexusForever.Game.Static.Quest;
+using NexusForever.GameTable.Model;
 using NexusForever.Network.World.Message.Model;
+using NexusForever.Network.World.Message.Static;
 using NexusForever.Script;
 using NexusForever.Script.Template;
 using NexusForever.Script.Template.Collection;
@@ -160,7 +165,11 @@ namespace NexusForever.Game.Quest
                 Timer = (uint)(questTimer.Time * 1000d);
             }
 
-            // TODO: objective timers
+            foreach (IQuestObjective objective in objectives)
+            {
+                if (objective.ObjectiveInfo.Entry.MaxTimeAllowedMS != 0u)
+                    ((QuestObjective)objective).InitialiseTimer();
+            }
         }
 
         public void Save(CharacterContext context)
@@ -329,6 +338,8 @@ namespace NexusForever.Game.Quest
 
             if (objectives.All(o => o.IsComplete()))
                 State = QuestState.Achieved;
+
+            player.VisibilityUpdate();
         }
 
         /// <summary>
@@ -366,6 +377,8 @@ namespace NexusForever.Game.Quest
 
             if (objectives.All(o => o.IsComplete()))
                 State = QuestState.Achieved;
+
+            player.VisibilityUpdate();
         }
 
         private bool CanUpdateObjective(IQuestObjective objective)
@@ -398,19 +411,37 @@ namespace NexusForever.Game.Quest
             }
         }
 
-        private void SendQuestObjectiveUpdate(IQuestObjective objective)
-        {
-            // Only update objectives if the state isn't complete. Some scripts will complete quest without objective update.
-            if (State == QuestState.Completed)
-                return;
+         private void SendQuestObjectiveUpdate(IQuestObjective objective)
+         {
+             // Only update objectives if the state isn't complete. Some scripts will complete quest without objective update.
+             if (State == QuestState.Completed)
+                 return;
 
-            player.Session.EnqueueMessageEncrypted(new ServerQuestObjectiveUpdate
-            {
-                QuestId   = Id,
-                QuestObjectiveIndex     = objective.Index,
-                Completed = objective.Progress
-            });
-        }
+             player.Session.EnqueueMessageEncrypted(new ServerQuestObjectiveUpdate
+             {
+                 QuestId   = Id,
+                 QuestObjectiveIndex     = objective.Index,
+                 Completed = objective.Progress
+             });
+
+             uint[] worldLocationIds = new[]
+             {
+                 objective.ObjectiveInfo.Entry.WorldLocationsIdIndicator00,
+                 objective.ObjectiveInfo.Entry.WorldLocationsIdIndicator01,
+                 objective.ObjectiveInfo.Entry.WorldLocationsIdIndicator02,
+                 objective.ObjectiveInfo.Entry.WorldLocationsIdIndicator03
+             };
+
+             foreach (uint wlId in worldLocationIds.Where(id => id != 0))
+             {
+                 player.Session.EnqueueMessageEncrypted(new ServerQuestObjectiveWorldLocation
+                 {
+                     QuestId             = Id,
+                     QuestObjectiveIndex = objective.Index,
+                     WorldLocation2Id    = wlId
+                 });
+             }
+         }
 
         /// <summary>
         /// Invoked when <see cref="QuestState"/> for <see cref="IQuest"/> is updated.
@@ -439,6 +470,134 @@ namespace NexusForever.Game.Quest
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
+        }
+
+        /// <summary>
+        /// Send a <see cref="ServerQuestLuaEvent"/> to the client with the supplied event ID and data.
+        /// </summary>
+        public void SendLuaEvent(ushort luaEventId, params ServerQuestLuaEvent.ILuaEventData[] luaEvents)
+        {
+            SendLuaEvent(luaEventId, (IEnumerable<ServerQuestLuaEvent.ILuaEventData>)luaEvents);
+        }
+
+        /// <summary>
+        /// Send a <see cref="ServerQuestLuaEvent"/> to the client with the supplied event ID and data.
+        /// </summary>
+        public void SendLuaEvent(ushort luaEventId, IEnumerable<ServerQuestLuaEvent.ILuaEventData> luaEvents)
+        {
+            player.Session.EnqueueMessageEncrypted(new ServerQuestLuaEvent
+            {
+                LuaEventId = luaEventId,
+                LuaEvents  = luaEvents?.ToList() ?? [],
+            });
+        }
+
+        /// <summary>
+        /// Return the <see cref="IPlayer"/> that owns this quest.
+        /// </summary>
+        public IPlayer GetOwner()
+        {
+            return player;
+        }
+
+        /// <summary>
+        /// Return the <see cref="IQuestObjective"/> with the supplied id.
+        /// </summary>
+        public IQuestObjective GetQuestObjective(uint id)
+        {
+            return objectives.SingleOrDefault(o => o.ObjectiveInfo.Entry.Id == id);
+        }
+
+        /// <summary>
+        /// Return the <see cref="IQuestObjective"/> with the supplied index.
+        /// </summary>
+        public IQuestObjective GetQuestObjectiveByIndex(byte index)
+        {
+            return objectives.SingleOrDefault(o => o.Index == index);
+        }
+
+        /// <summary>
+        /// Complete this quest, reclaiming pushed items and setting state to Completed.
+        /// </summary>
+        public void CompleteQuest()
+        {
+            if (State != QuestState.Achieved)
+                return;
+
+            // reclaim any quest specific items
+            for (int i = 0; i < Info.Entry.PushedItemIds.Length; i++)
+            {
+                uint itemId = Info.Entry.PushedItemIds[i];
+                if (itemId != 0u)
+                    player.Inventory.ItemDelete(itemId, Info.Entry.PushedItemCounts[i]);
+            }
+
+            State = QuestState.Completed;
+
+            // mark repeatable quests for reset
+            switch ((QuestRepeatPeriod)Info.Entry.QuestRepeatPeriodEnum)
+            {
+                case QuestRepeatPeriod.Daily:
+                    Reset = GlobalQuestManager.Instance.NextDailyReset;
+                    break;
+                case QuestRepeatPeriod.Weekly:
+                    Reset = GlobalQuestManager.Instance.NextWeeklyReset;
+                    break;
+            }
+
+            player.AchievementManager.CheckAchievements(player, AchievementType.QuestComplete, Id);
+        }
+
+        /// <summary>
+        /// Reward this quest with the supplied reward id, applying rewards and calling CompleteQuest.
+        /// </summary>
+        public void RewardQuest(ushort reward)
+        {
+            if (State != QuestState.Achieved)
+                return;
+
+            // Handle all Rewards that are not chosen
+            foreach (Quest2RewardEntry rewardEntry in Info.Rewards.Values.Where(x => x.Flags == 0))
+                RewardQuest(rewardEntry);
+
+            // Handle any chosen rewards
+            if (reward != 0)
+            {
+                if (Info.Rewards.TryGetValue(reward, out Quest2RewardEntry entry))
+                    RewardQuest(entry);
+            }
+
+            uint experience = Info.GetRewardExperience();
+            if (experience != 0u)
+                player.XpManager.GrantXp(experience, ExpReason.Quest);
+
+            uint money = Info.GetRewardMoney();
+            if (money != 0u)
+                player.CurrencyManager.CurrencyAddAmount(CurrencyType.Credits, money);
+
+            CompleteQuest();
+        }
+
+        private void RewardQuest(Quest2RewardEntry entry)
+        {
+            switch ((QuestRewardType)entry.Quest2RewardTypeId)
+            {
+                case QuestRewardType.Item:
+                    player.Inventory.ItemCreate(InventoryLocation.Inventory, entry.ObjectId, entry.ObjectAmount);
+                    break;
+                case QuestRewardType.Money:
+                    player.CurrencyManager.CurrencyAddAmount((CurrencyType)entry.ObjectId, entry.ObjectAmount);
+                    break;
+                case QuestRewardType.SpellShortcut:
+                    player.Session.EnqueueMessageEncrypted(new ServerQuestSpellShortcut
+                    {
+                        SpellId    = entry.ObjectId,
+                        Reason     = 0u,
+                        SourceId   = entry.Quest2Id,
+                        AddRemove  = true
+                    });
+                    break;
+            }
         }
     }
 }

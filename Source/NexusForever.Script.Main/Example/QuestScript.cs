@@ -13,9 +13,9 @@ namespace NexusForever.Script.Main.Example
         /// <summary>
         /// Invoked when <see cref="IScript"/> is loaded.
         /// </summary>
-        public void OnLoad(IQuest owner)
+        public void OnLoad(IQuest entityOwner)
         {
-            this.owner = owner;
+            this.owner = entityOwner;
         }
 
         /// <summary>

@@ -13,9 +13,18 @@ namespace NexusForever.Network.World.Message.Model
 
         public class SpellInit : IWritable
         {
+            public uint CastingId { get; set; }
+            public uint Spell4Id { get; set; }
+            public uint CasterId { get; set; }
+            public List<TargetInfo.EffectInfo> EffectInfoData { get; } = new();
+
             public void Write(GamePacketWriter writer)
             {
-                throw new NotImplementedException();
+                writer.Write(CastingId);
+                writer.Write(Spell4Id, 18u);
+                writer.Write(CasterId);
+                writer.Write((byte)EffectInfoData.Count, 8u);
+                EffectInfoData.ForEach(e => e.Write(writer));
             }
         }
 

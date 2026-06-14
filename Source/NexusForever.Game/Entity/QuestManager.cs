@@ -152,6 +152,30 @@ namespace NexusForever.Game.Entity
                         }).ToList()
                     }).ToList()
             });
+
+            foreach (IQuest quest in activeQuests.Values)
+            {
+                foreach (IQuestObjective objective in quest)
+                {
+                    uint[] worldLocationIds = new[]
+                    {
+                        objective.ObjectiveInfo.Entry.WorldLocationsIdIndicator00,
+                        objective.ObjectiveInfo.Entry.WorldLocationsIdIndicator01,
+                        objective.ObjectiveInfo.Entry.WorldLocationsIdIndicator02,
+                        objective.ObjectiveInfo.Entry.WorldLocationsIdIndicator03
+                    };
+
+                    foreach (uint wlId in worldLocationIds.Where(id => id != 0))
+                    {
+                        player.Session.EnqueueMessageEncrypted(new ServerQuestObjectiveWorldLocation
+                        {
+                            QuestId             = quest.Id,
+                            QuestObjectiveIndex = objective.Index,
+                            WorldLocation2Id    = wlId
+                        });
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -473,6 +497,22 @@ namespace NexusForever.Game.Entity
 
             foreach (IQuestObjectiveInfo info in quest.Info.Objectives)
                 quest.ObjectiveUpdate(info.Type, info.Entry.Data, info.Entry.Count);
+
+            // Q-0.2: dispatch CompleteQuest to any active quest that requires this quest
+            foreach (IQuest otherQuest in activeQuests.Values)
+            {
+                if (otherQuest.State != QuestState.Accepted)
+                    continue;
+
+                foreach (IQuestObjective objective in otherQuest)
+                {
+                    if (objective.ObjectiveInfo.Entry.Type == (uint)QuestObjectiveType.CompleteQuest
+                        && objective.ObjectiveInfo.Entry.Data == questId)
+                    {
+                        otherQuest.ObjectiveUpdate(QuestObjectiveType.CompleteQuest, questId, 1u);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -550,6 +590,22 @@ namespace NexusForever.Game.Entity
             RewardQuest(quest.Info, reward);
             quest.State = QuestState.Completed;
 
+            // Q-0.2: dispatch CompleteQuest to any active quest that requires this quest
+            foreach (IQuest otherQuest in activeQuests.Values)
+            {
+                if (otherQuest.State != QuestState.Accepted)
+                    continue;
+
+                foreach (IQuestObjective objective in otherQuest)
+                {
+                    if (objective.ObjectiveInfo.Entry.Type == (uint)QuestObjectiveType.CompleteQuest
+                        && objective.ObjectiveInfo.Entry.Data == questId)
+                    {
+                        otherQuest.ObjectiveUpdate(QuestObjectiveType.CompleteQuest, questId, 1u);
+                    }
+                }
+            }
+
             // mark repeatable quests for reset
             switch ((QuestRepeatPeriod)quest.Info.Entry.QuestRepeatPeriodEnum)
             {
@@ -604,6 +660,15 @@ namespace NexusForever.Game.Entity
                     break;
                 case QuestRewardType.Money:
                     player.CurrencyManager.CurrencyAddAmount((CurrencyType)entry.ObjectId, entry.ObjectAmount);
+                    break;
+                case QuestRewardType.SpellShortcut:
+                    player.Session.EnqueueMessageEncrypted(new ServerQuestSpellShortcut
+                    {
+                        SpellId    = entry.ObjectId,
+                        Reason     = 0u,
+                        SourceId   = entry.Quest2Id,
+                        AddRemove  = true
+                    });
                     break;
                 default:
                 {
@@ -681,7 +746,11 @@ namespace NexusForever.Game.Entity
             if (recipient == null)
                 throw new QuestException($"Player {player.CharacterId} tried to share quest {questId} to an invalid player!");
 
-            // TODO
+            recipient.Session.EnqueueMessageEncrypted(new ServerQuestShared
+            {
+                SharerUnitId = player.Guid,
+                QuestId      = questId
+            });
 
             log.Trace($"Shared quest {questId} with player {recipient.Name}.");
         }
@@ -691,7 +760,26 @@ namespace NexusForever.Game.Entity
         /// </summary>
         public void QuestShareResult(ushort questId, bool result)
         {
-            // TODO
+            IQuestInfo info = GlobalQuestManager.Instance.GetQuestInfo(questId);
+            if (info == null)
+                return;
+
+            if (result)
+            {
+                // player may already have an existing attempt (botched/incomplete), remove it first
+                IQuest existingQuest = GetQuest(questId);
+                if (existingQuest != null)
+                    QuestRemove(existingQuest);
+
+                IQuest quest = new Quest.Quest(player, info);
+                quest.Flags |= QuestStateFlags.Tracked;
+                quest.State = QuestState.Accepted;
+                activeQuests.Add(questId, quest);
+
+                quest.InitialiseTimer();
+
+                log.Trace($"Accepted shared quest {questId}.");
+            }
         }
 
         /// <summary>
@@ -699,7 +787,14 @@ namespace NexusForever.Game.Entity
         /// </summary>
         public void ObjectiveUpdate(QuestObjectiveType type, uint data, uint progress)
         {
-            foreach (IQuest quest in activeQuests.Values)
+            if (activeQuests.Count == 0)
+            {
+                log.Warn($"ObjectiveUpdate({type}, {data}, {progress}) called but player has no active quests. "
+                    + "Update is silently ignored.");
+                return;
+            }
+
+            foreach (IQuest quest in activeQuests.Values.ToList())
                 quest.ObjectiveUpdate(type, data, progress);
         }
 
@@ -708,6 +803,13 @@ namespace NexusForever.Game.Entity
         /// </summary>
         public void ObjectiveUpdate(uint id, uint progress)
         {
+            if (activeQuests.Count == 0)
+            {
+                log.Warn($"ObjectiveUpdate({id}, {progress}) called but player has no active quests. "
+                    + "Update is silently ignored.");
+                return;
+            }
+
             foreach (IQuest quest in activeQuests.Values)
                 quest.ObjectiveUpdate(id, progress);
         }
@@ -718,6 +820,41 @@ namespace NexusForever.Game.Entity
         public IEnumerable<IQuest> GetActiveQuests()
         {
             return activeQuests.Values;
+        }
+
+        /// <summary>
+        /// Return the active <see cref="IQuest"/> with the supplied quest id.
+        /// </summary>
+        public IQuest GetActiveQuest(ushort questId)
+        {
+            activeQuests.TryGetValue(questId, out IQuest quest);
+            return quest;
+        }
+
+        /// <summary>
+        /// Add a quest from supplied quest id, skipping validation.
+        /// </summary>
+        public void QuestAdd(ushort questId)
+        {
+            IQuestInfo info = GlobalQuestManager.Instance.GetQuestInfo(questId);
+            if (info == null)
+                throw new ArgumentException($"Invalid quest {questId}!");
+
+            QuestAdd(info);
+        }
+
+        /// <summary>
+        /// Complete an achieved quest, moving it to the completed dictionary.
+        /// </summary>
+        public void QuestComplete(ushort questId)
+        {
+            IQuest quest = GetActiveQuest(questId);
+            if (quest == null || quest.State != QuestState.Achieved)
+                return;
+
+            quest.CompleteQuest();
+            activeQuests.Remove(questId);
+            completedQuests.Add(questId, quest);
         }
     }
 }

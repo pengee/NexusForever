@@ -1,9 +1,9 @@
-﻿using System.Numerics;
-using NexusForever.Game.Abstract.Entity;
+﻿using NexusForever.Game.Abstract.Entity;
 using NexusForever.Game.Abstract.Spell;
 using NexusForever.Game.Map.Search;
 using NexusForever.Game.Static.Spell;
 using NexusForever.GameTable.Model;
+using System.Numerics;
 using NLog;
 
 namespace NexusForever.Game.Spell

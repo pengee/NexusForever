@@ -1,9 +1,9 @@
-﻿using NexusForever.Game.Static.Map;
+﻿using NexusForever.GameTable.Model;
 
 namespace NexusForever.Game.Abstract.Map
 {
     public interface IMapFactory
     {
-        IMap CreateMap(MapType mapType);
+        IMap CreateMap(WorldEntry entry);
     }
 }

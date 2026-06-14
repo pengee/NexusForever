@@ -29,11 +29,15 @@ namespace NexusForever.Network.Session
         #region Dependency Injection
 
         private readonly IMessageManager messageManager;
+        private readonly double sessionTimeout;
 
         public GameSession(
-            IMessageManager messageManager)
+            IMessageManager messageManager,
+            double sessionTimeout)
+            : base(sessionTimeout)
         {
-            this.messageManager = messageManager;
+            this.messageManager   = messageManager;
+            this.sessionTimeout  = sessionTimeout;
         }
 
         #endregion

@@ -2,173 +2,1249 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title></title>
+    <title>Nexus Forever</title>
     <style>
-        table {
-            border: 0
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #e0e0e0; height: 100vh; display: flex; flex-direction: column; }
+        h1 { font-size: 18px; padding: 12px 16px; background: #16213e; border-bottom: 1px solid #0f3460; }
+        #tabBar { display: flex; background: #16213e; border-bottom: 1px solid #0f3460; }
+        .tab { padding: 10px 24px; cursor: pointer; background: transparent; color: #8899aa; border: none; font-size: 14px; border-bottom: 2px solid transparent; }
+        .tab:hover { color: #e0e0e0; }
+        .tab.active { color: #4fc3f7; border-bottom: 2px solid #4fc3f7; }
+        .tab-content { display: none; flex: 1; overflow: hidden; }
+        .tab-content.active { display: flex; }
 
-        .commslog-data {
-            font-family: Consolas, Courier New, Courier, monospace;
-        }
+        #browseTab { flex-direction: row; }
+        #sidebar { width: 200px; min-width: 200px; background: #16213e; border-right: 1px solid #0f3460; overflow-y: auto; display: flex; flex-direction: column; }
+        #sidebar h3 { padding: 12px; font-size: 13px; color: #8899aa; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #0f3460; }
+        #sidebar input { margin: 8px; padding: 6px 8px; background: #0d1b2a; border: 1px solid #0f3460; color: #e0e0e0; border-radius: 4px; font-size: 12px; }
+        #tableList { flex: 1; overflow-y: auto; }
+        .table-entry { padding: 8px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid #0f3460; transition: background 0.15s; }
+        .table-entry:hover { background: #0f3460; }
+        .table-entry.active { background: #1a3a6a; color: #4fc3f7; }
+        .table-entry .count { float: right; color: #667; font-size: 11px; }
 
-        .commslog-server {
-            background-color: red;
-            color: white
-        }
+        #mainArea { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        #searchBar { display: flex; gap: 8px; padding: 8px 12px; background: #16213e; border-bottom: 1px solid #0f3460; }
+        #searchBar input { flex: 1; padding: 6px 10px; background: #0d1b2a; border: 1px solid #0f3460; color: #e0e0e0; border-radius: 4px; font-size: 13px; }
+        #searchBar button { padding: 6px 16px; background: #0f3460; color: #e0e0e0; border: 1px solid #1a4a8a; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        #searchBar button:hover { background: #1a4a8a; }
+        #searchBar .status { color: #8899aa; font-size: 12px; align-self: center; }
 
-        .commslog-client {
-            background-color: green;
-            color: white
-        }
+        #filterBar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #0d1b2a; border-bottom: 1px solid #0f3460; font-size: 12px; }
+        #filterBar input { flex: 0 1 200px; padding: 4px 8px; background: #1a1a2e; border: 1px solid #0f3460; color: #e0e0e0; border-radius: 3px; font-size: 12px; }
+        #filterBar button { padding: 4px 10px; background: #333; color: #ccc; border: 1px solid #555; border-radius: 3px; cursor: pointer; font-size: 11px; }
+        #filterBar button:hover { background: #444; }
+        #filterBar .count-label { color: #8899aa; margin-left: auto; }
+
+        .table-wrapper { flex: 1; overflow: auto; }
+        #dataTable { width: 100%; border-collapse: collapse; font-size: 12px; }
+        #dataTable th { position: sticky; top: 0; background: #0d1b2a; padding: 6px 10px; text-align: left; cursor: pointer; white-space: nowrap; border-bottom: 2px solid #0f3460; user-select: none; }
+        #dataTable th:hover { background: #16213e; }
+        #dataTable th .sort-indicator { color: #4fc3f7; margin-left: 4px; }
+        #dataTable td { padding: 4px 10px; border-bottom: 1px solid #0f3460; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #dataTable tr:hover td { background: #16213e; }
+        #dataTable tr.selected td { background: #1a3a6a; }
+        #dataTable td.fk-link { color: #4fc3f7; cursor: pointer; text-decoration: underline; text-decoration-color: #4fc3f7; }
+        #dataTable td.fk-link:hover { color: #81d4fa; }
+
+        #pagination { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 8px; background: #16213e; border-top: 1px solid #0f3460; font-size: 13px; }
+        #pagination button { padding: 4px 12px; background: #0f3460; color: #e0e0e0; border: 1px solid #1a4a8a; border-radius: 3px; cursor: pointer; font-size: 12px; }
+        #pagination button:disabled { opacity: 0.4; cursor: default; }
+        #pagination button:hover:not(:disabled) { background: #1a4a8a; }
+
+        #detailPanel { position: absolute; top: 0; right: 0; width: 380px; height: 100%; background: #16213e; border-left: 1px solid #0f3460; overflow-y: auto; display: none; z-index: 10; }
+        #detailPanel.open { display: block; }
+        #detailPanel .detail-header { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #0d1b2a; border-bottom: 1px solid #0f3460; position: sticky; top: 0; z-index: 1; }
+        #detailPanel .detail-header h3 { font-size: 14px; }
+        #detailPanel .detail-close { cursor: pointer; padding: 4px 8px; background: #333; border: 1px solid #555; color: #ccc; border-radius: 3px; font-size: 13px; }
+        #detailPanel .detail-field { padding: 8px 12px; border-bottom: 1px solid #0f3460; font-size: 13px; }
+        #detailPanel .detail-field .field-name { color: #8899aa; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+        #detailPanel .detail-field .field-value { word-break: break-all; }
+        #detailPanel .detail-field .field-value.fk-link { color: #4fc3f7; cursor: pointer; text-decoration: underline; }
+        #detailPanel .detail-field .field-value.fk-link:hover { color: #81d4fa; }
+        #detailPanel .no-detail { padding: 24px; text-align: center; color: #667; }
+
+        #consoleTab { flex-direction: column; padding: 16px; }
+        #consoleTab .console-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        #consoleTab .console-header h3 { font-size: 14px; }
+        #consoleTab .state-label { font-size: 12px; color: #8899aa; }
+        #consoleTab .console-log { flex: 1; overflow-y: auto; background: #0d1b2a; border: 1px solid #0f3460; border-radius: 4px; padding: 8px; margin-bottom: 12px; font-family: Consolas, 'Courier New', monospace; font-size: 12px; }
+        #consoleTab .console-log .msg { padding: 2px 4px; }
+        #consoleTab .console-log .msg.info { color: #ccc; }
+        #consoleTab .console-log .msg.error { color: #ff6b6b; }
+        #consoleTab .console-log .msg.client { color: #69db7c; }
+        #consoleTab .console-input-row { display: flex; gap: 8px; }
+        #consoleTab .console-input-row input { flex: 1; padding: 8px 12px; background: #0d1b2a; border: 1px solid #0f3460; color: #e0e0e0; border-radius: 4px; font-family: Consolas, 'Courier New', monospace; font-size: 13px; }
+        #consoleTab .console-input-row input:disabled { opacity: 0.4; }
+        #consoleTab .console-input-row button { padding: 8px 16px; background: #0f3460; color: #e0e0e0; border: 1px solid #1a4a8a; border-radius: 4px; cursor: pointer; }
+        #consoleTab .console-input-row button:hover { background: #1a4a8a; }
+        #consoleTab .console-input-row button:disabled { opacity: 0.4; cursor: default; }
+        #consoleTab .conn-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        #consoleTab .conn-row button { padding: 6px 14px; background: #0f3460; color: #e0e0e0; border: 1px solid #1a4a8a; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        #consoleTab .conn-row button:hover { background: #1a4a8a; }
+
+        /* Admin tab styles */
+        .status-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; padding: 20px; }
+        .status-card { background: #16213e; border: 1px solid #0f3460; border-radius: 6px; padding: 16px; text-align: center; }
+        .status-card .card-value { font-size: 28px; font-weight: bold; color: #4fc3f7; margin-bottom: 4px; }
+        .status-card .card-label { font-size: 12px; color: #8899aa; text-transform: uppercase; letter-spacing: 0.5px; }
+        .section-title { font-size: 16px; margin-bottom: 12px; color: #ccc; border-bottom: 1px solid #0f3460; padding-bottom: 8px; }
+        .instances-table { width: 100%; border-collapse: collapse; font-size: 13px; background: #16213e; border-radius: 6px; overflow: hidden; }
+        .instances-table th { background: #0d1b2a; padding: 8px 12px; text-align: left; color: #8899aa; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #0f3460; }
+        .instances-table td { padding: 8px 12px; border-bottom: 1px solid #0f3460; }
+        .instances-table tr:hover td { background: rgba(79,195,247,0.05); }
+        #adminEntityTab { flex-direction: row; }
+        #adminEntitySidebar { width: 220px; min-width: 220px; background: #16213e; border-right: 1px solid #0f3460; overflow-y: auto; display: flex; flex-direction: column; }
+        #adminEntitySidebar .filter-section { padding: 12px; border-bottom: 1px solid #0f3460; }
+        #adminEntitySidebar label { font-size: 11px; color: #8899aa; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
+        #adminEntitySidebar select, #adminEntitySidebar input { width: 100%; padding: 6px 8px; background: #0d1b2a; border: 1px solid #0f3460; color: #e0e0e0; border-radius: 4px; font-size: 12px; margin-bottom: 8px; }
+        #adminEntitySidebar button { width: 100%; padding: 6px; background: #0f3460; color: #e0e0e0; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-bottom: 8px; }
+        #adminEntitySidebar button:hover { background: #1a4a8a; }
+        #adminOnlineTab, #adminAccountsTab, #adminCharactersTab, #adminInstancesTab { flex-direction: column; overflow-y: auto; }
+        #adminAccountsTab .search-bar, #adminCharactersTab .search-bar { display: flex; gap: 8px; padding: 12px; background: #16213e; border-bottom: 1px solid #0f3460; align-items: center; }
+        #adminAccountsTab .search-bar input, #adminCharactersTab .search-bar input { flex: 1; padding: 8px 12px; background: #0d1b2a; border: 1px solid #0f3460; color: #e0e0e0; border-radius: 4px; font-size: 13px; }
+        #adminAccountsTab .search-bar button, #adminCharactersTab .search-bar button { padding: 8px 16px; background: #0f3460; color: #e0e0e0; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        #adminAccountsTab .search-bar button:hover, #adminCharactersTab .search-bar button:hover { background: #1a4a8a; }
+        .admin-data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .admin-data-table th { position: sticky; top: 0; background: #0d1b2a; padding: 8px 12px; text-align: left; color: #8899aa; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #0f3460; white-space: nowrap; }
+        .admin-data-table td { padding: 8px 12px; border-bottom: 1px solid #0f3460; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .admin-data-table tr:hover td { background: rgba(79,195,247,0.05); cursor: pointer; }
+        .admin-data-table tr.selected td { background: #1a3a6a; }
+        .admin-player-table { width: 100%; border-collapse: collapse; font-size: 13px; background: #16213e; border-radius: 6px; overflow: hidden; }
+        .admin-player-table th { background: #0d1b2a; padding: 8px 12px; text-align: left; color: #8899aa; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #0f3460; }
+        .admin-player-table td { padding: 8px 12px; border-bottom: 1px solid #0f3460; }
+        .admin-player-table tr:hover td { background: rgba(79,195,247,0.05); cursor: pointer; }
+        #adminEntityDetailPanel { position: absolute; top: 0; right: 0; width: 400px; height: 100%; background: #16213e; border-left: 1px solid #0f3460; overflow-y: auto; display: none; z-index: 10; }
+        #adminEntityDetailPanel.open { display: block; }
+        #adminEntityDetailPanel .panel-header { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #0d1b2a; border-bottom: 1px solid #0f3460; position: sticky; top: 0; z-index: 1; }
+        #adminEntityDetailPanel .panel-header h3 { font-size: 14px; color: #4fc3f7; }
+        #adminEntityDetailPanel .close-btn { cursor: pointer; padding: 4px 8px; background: #333; border: 1px solid #555; color: #ccc; border-radius: 3px; font-size: 16px; line-height: 1; }
+        #adminEntityDetailPanel .close-btn:hover { background: #555; }
+        #adminEntityDetailPanel .panel-tabs { display: flex; background: #0d1b2a; border-bottom: 1px solid #0f3460; position: sticky; top: 44px; z-index: 1; }
+        #adminEntityDetailPanel .panel-tab { padding: 8px 12px; cursor: pointer; font-size: 12px; color: #8899aa; border-bottom: 2px solid transparent; }
+        #adminEntityDetailPanel .panel-tab:hover { color: #ccc; }
+        #adminEntityDetailPanel .panel-tab.active { color: #4fc3f7; border-bottom-color: #4fc3f7; }
+        #adminEntityDetailPanel .panel-body { padding: 12px; }
+        #adminEntityDetailPanel .field-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(15,52,96,0.5); font-size: 13px; }
+        #adminEntityDetailPanel .field-label { color: #8899aa; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; min-width: 100px; }
+        #adminEntityDetailPanel .field-value { text-align: right; word-break: break-all; max-width: 250px; }
+        #adminEntityDetailPanel .actions-bar { padding: 12px; border-top: 1px solid #0f3460; display: flex; gap: 8px; flex-wrap: wrap; position: sticky; bottom: 0; background: #16213e; }
+        #adminEntityDetailPanel .actions-bar button { padding: 6px 12px; background: #0f3460; color: #e0e0e0; border: 1px solid #1a4a8a; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        #adminEntityDetailPanel .actions-bar button:hover { background: #1a4a8a; }
+        #adminEntityDetailPanel .actions-bar button.danger { background: #6b2020; border-color: #8b3030; }
+        #adminEntityDetailPanel .actions-bar button.danger:hover { background: #8b3030; }
+        .admin-badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .admin-badge-online { background: #1b5e20; color: #a5d6a7; }
+        .admin-badge-offline { background: #424242; color: #9e9e9e; }
+        .admin-badge-banned { background: #6b2020; color: #ef9a9a; }
+        .admin-loading { text-align: center; padding: 20px; color: #8899aa; }
+        #adminServerTab { padding: 20px; overflow-y: auto; }
+        #adminBroadcastTab { padding: 20px; overflow-y: auto; }
+        .admin-broadcast-form { max-width: 600px; background: #16213e; border: 1px solid #0f3460; border-radius: 6px; padding: 20px; }
+        .admin-broadcast-form .form-group { margin-bottom: 16px; }
+        .admin-broadcast-form label { display: block; font-size: 12px; color: #8899aa; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .admin-broadcast-form input, .admin-broadcast-form select, .admin-broadcast-form textarea { width: 100%; padding: 8px 12px; background: #0d1b2a; border: 1px solid #0f3460; color: #e0e0e0; border-radius: 4px; font-size: 13px; }
+        .admin-broadcast-form textarea { min-height: 100px; resize: vertical; }
+        .admin-broadcast-form button { padding: 10px 24px; background: #0f3460; color: #e0e0e0; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .admin-broadcast-form button:hover { background: #1a4a8a; }
+        #adminModalOverlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 100; justify-content: center; align-items: center; }
+        #adminModalOverlay.open { display: flex; }
+        #adminModal { background: #16213e; border: 1px solid #0f3460; border-radius: 8px; padding: 24px; min-width: 350px; max-width: 500px; }
+        #adminModal h3 { margin-bottom: 16px; color: #4fc3f7; font-size: 16px; }
+        #adminModal .form-group { margin-bottom: 12px; }
+        #adminModal label { display: block; font-size: 12px; color: #8899aa; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        #adminModal input, #adminModal select, #adminModal textarea { width: 100%; padding: 8px 12px; background: #0d1b2a; border: 1px solid #0f3460; color: #e0e0e0; border-radius: 4px; font-size: 13px; }
+        #adminModal textarea { min-height: 80px; resize: vertical; }
+        #adminModal .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+        #adminModal button { padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; border: none; }
+        #adminModal .btn-primary { background: #0f3460; color: #e0e0e0; }
+        #adminModal .btn-primary:hover { background: #1a4a8a; }
+        #adminModal .btn-danger { background: #6b2020; color: #e0e0e0; }
+        #adminModal .btn-danger:hover { background: #8b3030; }
+        #adminModal .btn-secondary { background: #333; color: #ccc; border: 1px solid #555 !important; }
+        .admin-text-green { color: #69db7c; }
+        .admin-text-yellow { color: #fcc419; }
+        .admin-text-red { color: #ff6b6b; }
+        .admin-text-blue { color: #4fc3f7; }
     </style>
 </head>
 <body>
-    <h1>Nexus Forever - Command Console</h1>
-    <p id="stateLabel">Ready to connect...</p>
-    <div>
-        <!--<label for="connectionUrl">WebSocket Server URL:</label>-->
-        <input id="connectionUrl" type="hidden" />
-        <button id="connectButton" type="submit">Connect</button>
+    <h1>Nexus Forever</h1>
+    <div id="tabBar">
+        <button class="tab active" data-tab="browse" onclick="switchTab('browse')">Browse</button>
+        <button class="tab" data-tab="console" onclick="switchTab('console')">Console</button>
+        <button class="tab" data-tab="adminServer" onclick="switchTab('adminServer')">Server</button>
+        <button class="tab" data-tab="adminInstances" onclick="switchTab('adminInstances')">Instances</button>
+        <button class="tab" data-tab="adminEntities" onclick="switchTab('adminEntities')">Entities</button>
+        <button class="tab" data-tab="adminOnline" onclick="switchTab('adminOnline')">Online</button>
+        <button class="tab" data-tab="adminAccounts" onclick="switchTab('adminAccounts')">Accounts</button>
+        <button class="tab" data-tab="adminCharacters" onclick="switchTab('adminCharacters')">Characters</button>
+        <button class="tab" data-tab="adminBroadcast" onclick="switchTab('adminBroadcast')">Broadcast</button>
     </div>
-    <p></p>
 
-    <h2>Communication Log</h2>
-    <table style="width: 800px">
-        <thead>
-            <tr>
-                <td>Message</td>
-            </tr>
-        </thead>
-        <tbody id="commsLog"></tbody>
-    </table>
-    <div>
-        <input id="sendMessage" disabled />
-        <button id="sendButton" type="submit" disabled>Send</button>
-        <button id="closeButton" disabled>Close Socket</button>
+    <!-- Browse Tab -->
+    <div id="browseTab" class="tab-content active">
+        <div id="sidebar">
+            <h3>Tables</h3>
+            <input id="tableFilter" placeholder="Filter tables..." oninput="filterTableList()" />
+            <div id="tableList"></div>
+        </div>
+        <div id="mainArea">
+            <div id="searchBar">
+                <input id="searchInput" placeholder="Search all entries (searches text fields)..." onkeyup="if(event.key==='Enter') doSearch()" />
+                <button onclick="doSearch()">Go</button>
+                <span class="status" id="searchStatus"></span>
+            </div>
+            <div id="filterBar">
+                <span class="count-label" id="countLabel"></span>
+            </div>
+            <div class="table-wrapper">
+                <table id="dataTable">
+                    <thead id="tableHead"></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+            <div id="pagination"></div>
+        </div>
+        <div id="detailPanel">
+            <div class="detail-header">
+                <h3 id="detailTitle"></h3>
+                <button class="detail-close" onclick="closeDetail()">X</button>
+            </div>
+            <div id="detailContent"></div>
+        </div>
     </div>
+
+    <!-- Admin Server Tab -->
+    <div id="adminServerTab" class="tab-content">
+        <div class="status-cards">
+            <div class="status-card"><div class="card-value" id="adminOnlinePlayers">-</div><div class="card-label">Online Players</div></div>
+            <div class="status-card"><div class="card-value" id="adminLoadedMaps">-</div><div class="card-label">Loaded Maps</div></div>
+        </div>
+        <h2 class="section-title">Active Instances</h2>
+        <table class="instances-table">
+            <thead><tr><th>World ID</th><th>Name</th><th>Type</th><th>Players</th><th>Entities</th></tr></thead>
+            <tbody id="adminInstanceList"><tr><td colspan="5" class="admin-loading">Loading...</td></tr></tbody>
+        </table>
+    </div>
+
+    <!-- Admin Instances Tab -->
+    <div id="adminInstancesTab" class="tab-content">
+        <div style="padding:16px;"><h2 style="font-size:16px;">Loaded Map Instances</h2></div>
+        <div style="flex:1;overflow-y:auto;padding:0 16px 16px 16px;">
+            <table class="admin-data-table">
+                <thead><tr><th>World ID</th><th>Name</th><th>Type</th><th>Instance ID</th><th>State</th><th>Players</th><th>Entities</th><th>Actions</th></tr></thead>
+                <tbody id="adminInstancesList"><tr><td colspan="8" class="admin-loading">Loading...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Admin Entities Tab -->
+    <div id="adminEntitiesTab" class="tab-content">
+        <div id="adminEntitySidebar">
+            <div class="filter-section">
+                <label>World</label>
+                <select id="adminWorldSelect"><option value="">-- Select World --</option></select>
+                <label>Map</label>
+                <select id="adminMapSelect"><option value="all">All Maps in World</option></select>
+                <label>Type</label>
+                <select id="adminTypeFilter">
+                    <option value="all">All Types</option>
+                    <option value="NonPlayer" selected>NPCs</option>
+                    <option value="Player">Players</option>
+                    <option value="Chest">Chests</option>
+                    <option value="Door">Doors</option>
+                    <option value="Destructible">Destructibles</option>
+                </select>
+                <label>Search (Creature ID)</label>
+                <input type="text" id="adminEntitySearch" placeholder="e.g. 12345">
+                <button onclick="adminLoadEntities()">Load Entities</button>
+            </div>
+        </div>
+        <div style="flex:1;overflow-y:auto;">
+            <table class="admin-data-table">
+                <thead><tr><th>GUID</th><th>Type</th><th>CreatureID</th><th>Name</th><th>Position</th><th>HP%</th></tr></thead>
+                <tbody id="adminEntityList"><tr><td colspan="6" class="admin-loading">Select a world to begin</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Admin Entity Detail Panel -->
+    <div id="adminEntityDetailPanel">
+        <div class="panel-header"><h3 id="adminDetailTitle">Entity Details</h3><span class="close-btn" onclick="adminCloseEntityDetail()">&times;</span></div>
+        <div class="panel-tabs" id="adminDetailTabs"></div>
+        <div class="panel-body" id="adminDetailBody"></div>
+        <div class="actions-bar" id="adminDetailActions"></div>
+    </div>
+
+    <!-- Admin Online Tab -->
+    <div id="adminOnlineTab" class="tab-content">
+        <div style="padding:16px 16px 0 16px;"><h2 style="font-size:16px;">Online Players</h2></div>
+        <div style="flex:1;overflow-y:auto;padding:0 16px 16px 16px;">
+            <table class="admin-player-table">
+                <thead><tr><th>Name</th><th>Account</th><th>Level</th><th>Race</th><th>Class</th><th>World</th><th>Position</th></tr></thead>
+                <tbody id="adminOnlineList"><tr><td colspan="7" class="admin-loading">Loading...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Admin Accounts Tab -->
+    <div id="adminAccountsTab" class="tab-content">
+        <div class="search-bar">
+            <input type="text" id="adminAccountSearch" placeholder="Search by email...">
+            <button onclick="adminLoadAccounts()">Search</button>
+        </div>
+        <div style="flex:1;overflow-y:auto;">
+            <table class="admin-data-table">
+                <thead><tr><th>ID</th><th>Email</th><th>Created</th><th>Banned</th></tr></thead>
+                <tbody id="adminAccountList"><tr><td colspan="4" class="admin-loading">Enter search term</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Admin Characters Tab -->
+    <div id="adminCharactersTab" class="tab-content">
+        <div class="search-bar">
+            <input type="text" id="adminCharSearch" placeholder="Search by name...">
+            <button onclick="adminLoadCharacters()">Search</button>
+        </div>
+        <div style="flex:1;overflow-y:auto;">
+            <table class="admin-data-table">
+                <thead><tr><th>ID</th><th>Name</th><th>Account</th><th>Level</th><th>Race</th><th>Class</th><th>Status</th></tr></thead>
+                <tbody id="adminCharList"><tr><td colspan="7" class="admin-loading">Enter search term</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Admin Modal -->
+    <div id="adminModalOverlay">
+        <div id="adminModal"><h3 id="adminModalTitle">Action</h3><div id="adminModalContent"></div><div class="modal-actions"><button class="btn-secondary" onclick="adminCloseModal()">Cancel</button><button class="btn-primary" id="adminModalConfirm">Confirm</button></div></div>
+    </div>
+
+    <!-- Admin Broadcast Tab -->
+    <div id="adminBroadcastTab" class="tab-content">
+        <div style="padding:16px;"><h2 style="font-size:16px;">Server Broadcast</h2></div>
+        <div class="admin-broadcast-form" style="margin:0 16px 16px 16px;">
+            <div class="form-group">
+                <label>Tier</label>
+                <select id="adminBroadcastTier">
+                    <option value="0">Info</option>
+                    <option value="1" selected>Normal</option>
+                    <option value="2">Chat</option>
+                    <option value="3">System</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Message</label>
+                <textarea id="adminBroadcastMsg" placeholder="Enter broadcast message..."></textarea>
+            </div>
+            <button onclick="adminSendBroadcast()">Send Broadcast</button>
+        </div>
+    </div>
+
+    <!-- Console Tab -->
+    <div id="consoleTab" class="tab-content">
+        <div class="conn-row">
+            <label>State: <span class="state-label" id="stateLabel">Ready to connect...</span></label>
+            <input id="connectionUrl" type="hidden" />
+            <button id="connectButton">Connect</button>
+        </div>
+        <div class="console-log" id="commsLog"></div>
+        <div class="console-input-row">
+            <input id="sendMessage" placeholder="Type a command..." disabled />
+            <button id="sendButton" disabled>Send</button>
+        </div>
+    </div>
+
     <script>
+        // ============================================================
+        // State
+        // ============================================================
+        const state = {
+            currentTab: 'browse',
+            tables: [],
+            currentTable: null,
+            schema: null,
+            entries: [],
+            total: 0,
+            offset: 0,
+            limit: 100,
+            sortBy: null,
+            sortAsc: true,
+            detailEntry: null,
+            detailSchema: null,
+            searchMode: false,
+            columnFilters: {},
+        };
 
-        var connectionForm = document.getElementById("connectionForm");
-        var connectionUrl = document.getElementById("connectionUrl");
-        var connectButton = document.getElementById("connectButton");
-        var stateLabel = document.getElementById("stateLabel");
-        var sendMessage = document.getElementById("sendMessage");
-        var sendButton = document.getElementById("sendButton");
-        var sendForm = document.getElementById("sendForm");
-        var commsLog = document.getElementById("commsLog");
-        var socket;
-        var scheme = document.location.protocol == "https:" ? "wss" : "ws";
-        var port = document.location.port ? (":" + document.location.port) : "";
-        connectionUrl.value = scheme + "://" + document.location.hostname + port + "/ws/commands";
+        // ============================================================
+        // API
+        // ============================================================
+        async function api(url) {
+            const r = await fetch(url);
+            if (!r.ok) throw new Error(await r.text());
+            return r.json();
+        }
+
+        async function fetchTables() {
+            return api('/api/tables');
+        }
+
+        async function fetchSchema(name) {
+            return api('/api/tables/' + encodeURIComponent(name));
+        }
+
+        async function fetchEntries(name, offset, limit, sortBy, sortAsc, columnFilters) {
+            let url = '/api/tables/' + encodeURIComponent(name) + '/entries?offset=' + offset + '&limit=' + limit;
+            if (sortBy) url += '&sortBy=' + encodeURIComponent(sortBy);
+            if (sortAsc !== undefined) url += '&sortAsc=' + sortAsc;
+            if (columnFilters) {
+                for (const k in columnFilters) {
+                    if (columnFilters[k]) url += '&filter_' + encodeURIComponent(k) + '=' + encodeURIComponent(columnFilters[k]);
+                }
+            }
+            return api(url);
+        }
+
+        async function fetchEntry(name, id) {
+            return api('/api/tables/' + encodeURIComponent(name) + '/entries/' + id);
+        }
+
+        async function searchTable(name, q) {
+            return api('/api/tables/' + encodeURIComponent(name) + '/search?q=' + encodeURIComponent(q) + '&limit=200');
+        }
+
+        // ============================================================
+        // Browse Tab
+        // ============================================================
+        async function loadTables() {
+            try {
+                state.tables = await fetchTables();
+                renderSidebar();
+                if (state.tables.length > 0 && !state.currentTable) {
+                    selectTable(state.tables[0].name);
+                }
+            } catch (e) {
+                document.getElementById('tableList').innerHTML = '<div style="padding:12px;color:#ff6b6b">Failed to load tables: ' + e.message + '</div>';
+            }
+        }
+
+        function renderSidebar() {
+            const list = document.getElementById('tableList');
+            const q = (document.getElementById('tableFilter').value || '').toLowerCase();
+            list.innerHTML = '';
+            let count = 0;
+            for (const t of state.tables) {
+                if (q && !t.name.toLowerCase().includes(q)) continue;
+                count++;
+                const div = document.createElement('div');
+                div.className = 'table-entry' + (state.currentTable === t.name ? ' active' : '');
+                div.innerHTML = '<span>' + escapeHtml(t.name) + '</span><span class="count">' + t.count + '</span>';
+                div.onclick = () => selectTable(t.name);
+                list.appendChild(div);
+            }
+            if (count === 0) {
+                list.innerHTML = '<div style="padding:12px;color:#667">No tables match filter.</div>';
+            }
+        }
+
+        function filterTableList() { renderSidebar(); }
+
+        async function selectTable(name) {
+            state.currentTable = name;
+            state.offset = 0;
+            state.columnFilters = {};
+            state.searchMode = false;
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchStatus').textContent = '';
+            closeDetail();
+            renderSidebar();
+            try {
+                state.schema = await fetchSchema(name);
+                await loadPage();
+            } catch (e) {
+                document.getElementById('tableBody').innerHTML = '<tr><td colspan="10" style="padding:24px;text-align:center;color:#ff6b6b">Error: ' + escapeHtml(e.message) + '</td></tr>';
+            }
+        }
+
+        async function loadPage() {
+            if (!state.currentTable) return;
+            try {
+                const data = await fetchEntries(state.currentTable, state.offset, state.limit, state.sortBy, state.sortAsc, state.columnFilters);
+                state.entries = data.entries;
+                state.total = data.total;
+                renderTable();
+                renderPagination();
+            } catch (e) {
+                document.getElementById('tableBody').innerHTML = '<tr><td colspan="10" style="padding:24px;text-align:center;color:#ff6b6b">Error: ' + escapeHtml(e.message) + '</td></tr>';
+            }
+        }
+
+        function sortEntries(entries) {
+            if (!state.sortBy) return entries;
+            const col = state.sortBy;
+            const asc = state.sortAsc;
+            const copy = entries.slice();
+            copy.sort((a, b) => {
+                const va = a[col], vb = b[col];
+                const na = (va == null) ? '' : va;
+                const nb = (vb == null) ? '' : vb;
+                let cmp;
+                if (typeof na === 'number' && typeof nb === 'number') {
+                    cmp = na - nb;
+                } else {
+                    cmp = String(na).localeCompare(String(nb));
+                }
+                return asc ? cmp : -cmp;
+            });
+            return copy;
+        }
+
+        let displayedEntries = [];
+
+        function renderTable() {
+            const thead = document.getElementById('tableHead');
+            const tbody = document.getElementById('tableBody');
+            const schema = state.schema;
+            if (!schema || !schema.fields) { thead.innerHTML = ''; tbody.innerHTML = ''; return; }
+
+            displayedEntries = state.searchMode ? state.entries : sortEntries(state.entries);
+
+            // Column headers
+            let headHtml = '<tr>';
+            for (const f of schema.fields) {
+                const isSorted = state.sortBy === f.name;
+                const arrow = isSorted ? (state.sortAsc ? ' \u25B2' : ' \u25BC') : '';
+                headHtml += '<th onclick="toggleSort(\'' + f.name + '\')">' + escapeHtml(f.name) + '<span class="sort-indicator">' + arrow + '</span></th>';
+            }
+            headHtml += '</tr>';
+            // Column filter row
+            headHtml += '<tr id="filterRow">';
+            for (const f of schema.fields) {
+                const val = state.columnFilters[f.name] || '';
+                headHtml += '<th style="padding:2px 4px;font-weight:normal"><input data-field="' + f.name + '" value="' + val + '" placeholder="Filter..." onkeyup="if(event.key===\'Enter\') onColumnFilter(this)" style="width:100%;padding:3px 4px;background:#1a1a2e;border:1px solid #0f3460;color:#e0e0e0;border-radius:2px;font-size:11px" /></th>';
+            }
+            headHtml += '</tr>';
+            thead.innerHTML = headHtml;
+
+            // Rows
+            if (displayedEntries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="' + schema.fields.length + '" style="padding:24px;text-align:center;color:#667">' + (state.searchMode ? 'No results found.' : 'No entries.') + '</td></tr>';
+                document.getElementById('countLabel').textContent = '0 entries';
+                return;
+            }
+
+            let bodyHtml = '';
+            for (let i = 0; i < displayedEntries.length; i++) {
+                const entry = displayedEntries[i];
+                bodyHtml += '<tr onclick="showDetail(' + i + ', this)" data-index="' + i + '">';
+                for (const f of schema.fields) {
+                    const val = entry[f.name];
+                    const ref = f.references;
+                    const isFk = ref && val != null && String(val) !== '0';
+                    const display = formatValue(val);
+                    if (isFk) {
+                        const refTable = ref.table;
+                        bodyHtml += '<td class="fk-link" onclick="event.stopPropagation(); navigateToFk(\'' + escapeHtml(refTable) + '\',' + val + ')" title="Click to view ' + escapeHtml(refTable) + '[' + val + ']">' + display + '</td>';
+                    } else {
+                        bodyHtml += '<td title="' + escapeHtml(display) + '">' + display + '</td>';
+                    }
+                }
+                bodyHtml += '</tr>';
+            }
+            tbody.innerHTML = bodyHtml;
+
+            // Count label
+            const totalDisplay = state.total;
+            const shownCount = displayedEntries.length;
+            document.getElementById('countLabel').textContent = 'Showing ' + (state.offset + 1) + '-' + Math.min(state.offset + shownCount, totalDisplay) + ' of ' + totalDisplay;
+        }
+
+        function renderPagination() {
+            const total = state.searchMode ? state.entries.length : state.total;
+            const page = state.searchMode ? 1 : (Math.floor(state.offset / state.limit) + 1);
+            const pages = state.searchMode ? 1 : Math.max(1, Math.ceil(total / state.limit));
+            const el = document.getElementById('pagination');
+            if (state.searchMode) {
+                el.innerHTML = '<span>Search results: ' + total + ' entries</span><button onclick="clearSearch()">Clear Search</button>';
+                return;
+            }
+            el.innerHTML = '<button onclick="goPage(-1)" ' + (state.offset <= 0 ? 'disabled' : '') + '>\u25C0 Prev</button>' +
+                '<span>Page ' + page + ' of ' + pages + '</span>' +
+                '<button onclick="goPage(1)" ' + (state.offset + state.limit >= total ? 'disabled' : '') + '>Next \u25B6</button>';
+        }
+
+        function goPage(dir) {
+            state.offset = Math.max(0, state.offset + dir * state.limit);
+            loadPage();
+        }
+
+        async function toggleSort(col) {
+            if (state.sortBy === col) {
+                state.sortAsc = !state.sortAsc;
+            } else {
+                state.sortBy = col;
+                state.sortAsc = true;
+            }
+            state.offset = 0;
+            state.searchMode = false;
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchStatus').textContent = '';
+            await loadPage();
+        }
+
+        async function onColumnFilter(input) {
+            state.columnFilters[input.dataset.field] = input.value;
+            state.offset = 0;
+            await loadPage();
+        }
+
+        async function doSearch() {
+            const q = document.getElementById('searchInput').value.trim();
+            if (!q || !state.currentTable) return;
+            state.searchMode = true;
+            document.getElementById('searchStatus').textContent = 'Searching...';
+            try {
+                const data = await searchTable(state.currentTable, q);
+                state.entries = data.entries;
+                document.getElementById('searchStatus').textContent = 'Found ' + data.total + ' results';
+                renderTable();
+                renderPagination();
+            } catch (e) {
+                document.getElementById('searchStatus').textContent = 'Search failed';
+            }
+        }
+
+        function clearSearch() {
+            state.searchMode = false;
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchStatus').textContent = '';
+            loadPage();
+        }
+
+        let detailRow = null;
+
+        function showDetail(index, rowEl) {
+            if (detailRow) detailRow.classList.remove('selected');
+            detailRow = rowEl;
+            if (rowEl) rowEl.classList.add('selected');
+
+            const entry = displayedEntries[index];
+            if (!entry) return;
+
+            openDetailPanel(entry, state.schema);
+        }
+
+        function openDetailPanel(entry, schema) {
+            const panel = document.getElementById('detailPanel');
+            const title = document.getElementById('detailTitle');
+            const content = document.getElementById('detailContent');
+            panel.classList.add('open');
+            title.textContent = schema.name + ' [' + entry.Id + ']';
+
+            let html = '';
+            for (const f of schema.fields) {
+                const val = entry[f.name];
+                const display = formatValue(val);
+                const ref = f.references;
+                const isFk = ref && val != null && String(val) !== '0';
+                html += '<div class="detail-field">';
+                html += '<div class="field-name">' + escapeHtml(f.name) + ' <span style="color:#556;font-size:10px">' + escapeHtml(f.type) + '</span></div>';
+                if (isFk) {
+                    const refTable = ref.table;
+                    html += '<div class="field-value fk-link" onclick="navigateToFk(\'' + escapeHtml(refTable) + '\',' + val + ')">' + display + ' \u2192 ' + escapeHtml(refTable) + '</div>';
+                } else {
+                    html += '<div class="field-value">' + display + '</div>';
+                }
+                html += '</div>';
+            }
+            content.innerHTML = html;
+        }
+
+        function closeDetail() {
+            document.getElementById('detailPanel').classList.remove('open');
+            if (detailRow) { detailRow.classList.remove('selected'); detailRow = null; }
+        }
+
+        async function navigateToFk(table, id) {
+            closeDetail();
+            state.searchMode = false;
+            document.getElementById('searchInput').value = '';
+            await selectTable(table);
+            try {
+                const entry = await fetchEntry(table, id);
+                const schema = await fetchSchema(table);
+                openDetailPanel(entry, schema);
+            } catch (e) {
+                document.getElementById('tableBody').innerHTML = '<tr><td colspan="10" style="padding:24px;text-align:center;color:#ff6b6b">Entry ' + id + ' not found in ' + escapeHtml(table) + '</td></tr>';
+            }
+        }
+
+        function formatValue(val) {
+            if (val == null) return '<span style="color:#667">null</span>';
+            if (typeof val === 'string') {
+                if (val.length > 120) return escapeHtml(val.slice(0, 120)) + '...';
+                return escapeHtml(val);
+            }
+            if (Array.isArray(val)) return '[' + val.map(formatValue).join(', ') + ']';
+            return String(val);
+        }
+
+        function escapeHtml(s) {
+            if (typeof s !== 'string') return String(s);
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // ============================================================
+        // Console Tab
+        // ============================================================
+        let socket = null;
+        const connectionUrl = document.getElementById('connectionUrl');
+        const stateLabel = document.getElementById('stateLabel');
+        const sendMessage = document.getElementById('sendMessage');
+        const sendButton = document.getElementById('sendButton');
+        const connectButton = document.getElementById('connectButton');
+        const commsLog = document.getElementById('commsLog');
+
+        const scheme = document.location.protocol === 'https:' ? 'wss' : 'ws';
+        const port = document.location.port ? (':' + document.location.port) : '';
+        connectionUrl.value = scheme + '://' + document.location.hostname + port + '/ws/commands';
 
         function updateState() {
-            function disable() {
-                sendMessage.disabled = true;
-                sendButton.disabled = true;
-                closeButton.disabled = true;
-            }
-
-            function enable() {
-                sendMessage.disabled = false;
-                sendButton.disabled = false;
-                closeButton.disabled = false;
-            }
-
+            function disable() { sendMessage.disabled = true; sendButton.disabled = true; }
+            function enable() { sendMessage.disabled = false; sendButton.disabled = false; }
             connectionUrl.disabled = true;
             connectButton.disabled = true;
-
-            if (!socket) {
-                disable();
-            } else {
+            if (!socket) { disable(); } else {
                 switch (socket.readyState) {
-                    case WebSocket.CLOSED:
-                        stateLabel.innerHTML = "Closed";
-                        disable();
-                        connectionUrl.disabled = false;
-                        connectButton.disabled = false;
-                        break;
-                    case WebSocket.CLOSING:
-                        stateLabel.innerHTML = "Closing...";
-                        disable();
-                        break;
-                    case WebSocket.CONNECTING:
-                        stateLabel.innerHTML = "Connecting...";
-                        disable();
-                        break;
-                    case WebSocket.OPEN:
-                        stateLabel.innerHTML = "Open";
-                        enable();
-                        break;
-                    default:
-                        stateLabel.innerHTML = "Unknown WebSocket State: " + socket.readyState;
-                        disable();
-                        break;
+                    case WebSocket.CLOSED: stateLabel.textContent = 'Closed'; disable(); connectionUrl.disabled = false; connectButton.disabled = false; break;
+                    case WebSocket.CLOSING: stateLabel.textContent = 'Closing...'; disable(); break;
+                    case WebSocket.CONNECTING: stateLabel.textContent = 'Connecting...'; disable(); break;
+                    case WebSocket.OPEN: stateLabel.textContent = 'Open'; enable(); break;
+                    default: stateLabel.textContent = 'Unknown'; disable(); break;
                 }
             }
         }
 
-        closeButton.onclick = function () {
-            if (!socket || socket.readyState != WebSocket.OPEN) {
-                alert("socket not connected");
-            }
-            socket.close(1000, "Closing from client");
-        }
-
-        var sendMessageHandler = function() {
-            if (!socket || socket.readyState != WebSocket.OPEN) {
-                alert("socket not connected");
-            }
-            var data = sendMessage.value;
+        function sendMessageHandler() {
+            if (!socket || socket.readyState !== WebSocket.OPEN) { alert('socket not connected'); return; }
+            const data = sendMessage.value;
             socket.send(JSON.stringify({ message: data }));
-            commsLog.innerHTML += '<tr>' +
-                '<td class="commslog-data">' +
-                data +
-                '</td>' +
-                '</tr>';
-        };
+            commsLog.innerHTML += '<div class="msg client">&gt; ' + escapeHtml(data) + '</div>';
+            sendMessage.value = '';
+            commsLog.scrollTop = commsLog.scrollHeight;
+        }
 
-
-        sendMessage.addEventListener('keyup',
-            function(event) {
-                if (event.keyCode == 13) {
-                    sendButton.click();
-                }
-            });
-
+        sendMessage.addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') sendButton.click();
+        });
         sendButton.onclick = sendMessageHandler;
-        var connect = function () {
-            stateLabel.innerHTML = "Connecting";
+
+        function connectWebSocket() {
+            stateLabel.textContent = 'Connecting';
             socket = new WebSocket(connectionUrl.value);
-            socket.onopen = function (event) {
+            socket.onopen = function() {
                 updateState();
-                commsLog.innerHTML += '<tr>' +
-                    '<td class="commslog-data">Connection opened</td>' +
-                    '</tr>';
+                commsLog.innerHTML += '<div class="msg info">Connection opened</div>';
+                commsLog.scrollTop = commsLog.scrollHeight;
             };
-
-            socket.onclose = function (event) {
+            socket.onclose = function(event) {
                 updateState();
-                commsLog.innerHTML += '<tr>' +
-                    '<td class="commslog-data">Connection closed. Code: ' + event.code + '. Reason: ' + event.reason + '</td>' +
-                    '</tr>';
+                commsLog.innerHTML += '<div class="msg info">Connection closed. Code: ' + event.code + '</div>';
+                commsLog.scrollTop = commsLog.scrollHeight;
             };
-
             socket.onerror = updateState;
-            socket.onmessage = function (event) {
-                var obj = JSON.parse(event.data);
-                commsLog.innerHTML += '<tr>' +
-                    '<td class="commslog-data">' + obj.type + '<br /><pre>' + obj.text + '</pre></td>' +
-                    '</tr>';
-                window.scrollTo(0, document.body.scrollHeight);
+            socket.onmessage = function(event) {
+                const obj = JSON.parse(event.data);
+                commsLog.innerHTML += '<div class="msg ' + obj.type + '"><pre>' + escapeHtml(obj.text) + '</pre></div>';
+                commsLog.scrollTop = commsLog.scrollHeight;
             };
-        };
-        connectButton.onclick = connect;
+        }
 
-        document.addEventListener("DOMContentLoaded",
-            function (event) {
-                connect();
+        function disconnectWebSocket() {
+            if (socket) { socket.close(1000, 'Closing from client'); socket = null; }
+        }
+
+        connectButton.onclick = connectWebSocket;
+
+        // ============================================================
+        // Admin Tab Functions
+        // ============================================================
+
+        const adminState = { currentEntities: [] };
+
+        async function adminApi(path, options = {}) {
+            const res = await fetch(`/api/admin${path}`, { headers: { 'Content-Type': 'application/json' }, ...options });
+            if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+            return res.json();
+        }
+
+        // Server
+        async function adminLoadServerStatus() {
+            try {
+                const status = await adminApi('/server/status');
+                document.getElementById('adminOnlinePlayers').textContent = status.onlinePlayers;
+                document.getElementById('adminLoadedMaps').textContent = status.loadedMaps;
+                const maps = await adminApi('/loaded-maps');
+                const tbody = document.getElementById('adminInstanceList');
+                if (!maps.length) { tbody.innerHTML = '<tr><td colspan="5" class="admin-loading">No active maps</td></tr>'; return; }
+                tbody.innerHTML = maps.map(m => `<tr onclick="adminGoToEntities(${m.worldId})" style="cursor:pointer">
+                    <td>${m.worldId}</td><td>${m.name || 'Unknown'}</td><td>${m.typeName}</td>
+                    <td>${m.playerCount}</td><td>${m.entityCount}</td></tr>`).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function adminGoToEntities(worldId) {
+            switchTab('adminEntities');
+            await adminLoadWorlds();
+            document.getElementById('adminWorldSelect').value = worldId;
+            adminLoadEntities();
+        }
+
+        // Entities
+        async function adminLoadWorlds() {
+            try {
+                const maps = await adminApi('/loaded-maps');
+                const worldMap = new Map();
+                maps.forEach(m => {
+                    if (!worldMap.has(m.worldId)) {
+                        worldMap.set(m.worldId, { worldId: m.worldId, name: m.name || 'World ' + m.worldId, typeName: m.typeName, playerCount: 0, entityCount: 0, isInstanced: false });
+                    }
+                    const existing = worldMap.get(m.worldId);
+                    existing.playerCount += (m.playerCount || 0);
+                    existing.entityCount += (m.entityCount || 0);
+                    if (m.isInstanced) existing.isInstanced = true;
+                });
+                const entries = [...worldMap.values()].sort((a, b) => {
+                    if (a.playerCount !== b.playerCount) return b.playerCount - a.playerCount;
+                    return (a.name || '').localeCompare(b.name || '');
+                });
+                const sel = document.getElementById('adminWorldSelect');
+                sel.innerHTML = '<option value="">-- Select World --</option>' + entries.map(m => {
+                    let label = m.name || 'World ' + m.worldId;
+                    if (m.playerCount > 0) label += ` (${m.playerCount} players)`;
+                    else if (m.isInstanced) label += ' (instance)';
+                    else label += ' (loaded)';
+                    return `<option value="${m.worldId}">${label}</option>`;
+                }).join('');
+                const active = entries.find(m => m.playerCount > 0);
+                if (active && !sel.value) { sel.value = active.worldId; }
+            } catch (e) { console.error(e); }
+        }
+
+        document.getElementById('adminWorldSelect').addEventListener('change', async () => {
+            const worldId = document.getElementById('adminWorldSelect').value;
+            const mapSel = document.getElementById('adminMapSelect');
+            if (!worldId) { mapSel.innerHTML = '<option value="all">All Maps in World</option>'; return; }
+            try {
+                const maps = await adminApi('/loaded-maps');
+                const worldMaps = maps.filter(m => m.worldId == worldId);
+                mapSel.innerHTML = (worldMaps.length > 1 ? '<option value="all">All Maps in World</option>' : '') +
+                    worldMaps.map(m => `<option value="${m.worldId}">${m.name || 'Map'}${m.isInstanced ? ' (instance)' : ''}</option>`).join('');
+            } catch (e) { console.error(e); }
+        });
+
+        async function adminLoadEntities() {
+            const worldId = document.getElementById('adminWorldSelect').value;
+            if (!worldId) return;
+            const type = document.getElementById('adminTypeFilter').value;
+            const search = document.getElementById('adminEntitySearch').value.trim();
+            const tbody = document.getElementById('adminEntityList');
+            try {
+                let url = `/entities/${worldId}`;
+                if (type !== 'all') url += `?type=${encodeURIComponent(type)}`;
+                adminState.currentEntities = await adminApi(url);
+                if (search) {
+                    const searchLower = search.toLowerCase();
+                    adminState.currentEntities = adminState.currentEntities.filter(e => e.creatureId.toString() === search || (e.name && e.name.toLowerCase().includes(searchLower)));
+                }
+                adminRenderEntityTable(adminState.currentEntities);
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="5" class="admin-loading">${e.message}</td></tr>`;
+            }
+        }
+
+        function adminRenderEntityTable(entities) {
+            const tbody = document.getElementById('adminEntityList');
+            if (!entities.length) { tbody.innerHTML = '<tr><td colspan="6" class="admin-loading">No entities found</td></tr>'; return; }
+            tbody.innerHTML = entities.map(e => {
+                let hpClass = 'admin-text-green';
+                if (e.healthPct < 25) hpClass = 'admin-text-red';
+                else if (e.healthPct < 75) hpClass = 'admin-text-yellow';
+                return `<tr onclick="adminShowEntityDetail(${e.guid}, '${e.type}')">
+                    <td>${e.guid}</td><td>${e.type}</td><td>${e.creatureId}</td>
+                    <td title="${e.name || ''}">${e.name || '-'}</td>
+                    <td style="font-size:11px;">${e.position ? `${e.position.x.toFixed(1)}, ${e.position.y.toFixed(1)}, ${e.position.z.toFixed(1)}` : '-'}</td>
+                    <td><span class="hp-bar"><span class="hp-bar-fill" style="width:${e.healthPct}%;background:var(--hp-color)"></span></span> ${Math.round(e.healthPct)}%</td></tr>`;
+            }).join('');
+        }
+
+        async function adminShowEntityDetail(guid, type) {
+            document.querySelectorAll('.admin-data-table tr').forEach(r => r.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+            const panel = document.getElementById('adminEntityDetailPanel');
+            document.getElementById('adminDetailTitle').textContent = `Entity ${guid}`;
+            try {
+                const detail = await adminApi(`/entities/detail/${guid}`);
+                adminRenderDetailTabs(detail, type);
+                adminRenderDetailActions(detail, type);
+                panel.classList.add('open');
+            } catch (e) { alert('Error: ' + e.message); }
+        }
+
+        function adminRenderDetailTabs(detail, type) {
+            const tabs = ['Info'];
+            if (type === 'NonPlayer' || detail.inCombat !== undefined) tabs.push('Combat');
+            if (detail.creatureInfo || detail.isVendor) tabs.push('Creature');
+            if (detail.properties && detail.properties.length) tabs.push('Properties');
+            document.getElementById('adminDetailTabs').innerHTML = tabs.map((t, i) =>
+                `<div class="panel-tab ${i === 0 ? 'active' : ''}" onclick="adminSwitchDetailTab('${t}', this)">${t}</div>`).join('');
+            adminShowDetailContent(detail, tabs[0]);
+        }
+
+        function adminSwitchDetailTab(tabName, el) {
+            document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        function adminShowDetailContent(detail, tabName) {
+            const body = document.getElementById('adminDetailBody');
+            if (tabName === 'Info') {
+                body.innerHTML = `
+                    <div class="field-row"><span class="field-label">GUID</span><span class="field-value">${detail.guid}</span></div>
+                    <div class="field-row"><span class="field-label">Type</span><span class="field-value">${detail.type}</span></div>
+                    <div class="field-row"><span class="field-label">Creature ID</span><span class="field-value">${detail.creatureId}</span></div>
+                    ${detail.name ? `<div class="field-row"><span class="field-label">Name</span><span class="field-value">${detail.name}</span></div>` : ''}
+                    <div class="field-row"><span class="field-label">Position</span><span class="field-value">(${detail.position.x.toFixed(1)}, ${detail.position.y.toFixed(1)}, ${detail.position.z.toFixed(1)})</span></div>
+                    <div class="field-row"><span class="field-label">Rotation</span><span class="field-value">(${detail.rotation && detail.rotation.x ? detail.rotation.x.toFixed(2) : 0}, ${detail.rotation && detail.rotation.y ? detail.rotation.y.toFixed(2) : 0}, ${detail.rotation && detail.rotation.z ? detail.rotation.z.toFixed(2) : 0})</span></div>
+                    <div class="field-row"><span class="field-label">Health</span><span class="field-value">${detail.health}/${detail.maxHealth}</span></div>
+                    <div class="field-row"><span class="field-label">Shield</span><span class="field-value">${detail.shield}/${detail.maxShieldCapacity || 0}</span></div>
+                    <div class="field-row"><span class="field-label">Level</span><span class="field-value">${detail.level}</span></div>
+                    ${detail.faction1 ? `<div class="field-row"><span class="field-label">Faction</span><span class="field-value">${detail.faction1}, ${detail.faction2 || '-'}</span></div>` : ''}
+                `;
+            } else if (tabName === 'Combat') {
+                body.innerHTML = `
+                    <div class="field-row"><span class="field-label">In Combat</span><span class="field-value">${detail.inCombat ? '<span class="admin-text-red">Yes</span>' : '<span class="admin-text-green">No</span>'}</span></div>
+                    ${detail.isDead ? '<div class="field-row"><span class="field-label">Status</span><span class="field-value admin-text-red">DEAD</span></div>' : ''}
+                    ${detail.threatList && detail.threatList.length ? `<div style="margin-top:12px;font-size:12px;color:#8899aa;">Threat List:</div>
+                        <table style="width:100%;margin-top:4px;border-collapse:collapse;font-size:12px;"><thead><tr><th style="text-align:left;padding:4px;">Unit ID</th><th style="text-align:right;padding:4px;">Threat</th></tr></thead>
+                        <tbody>${detail.threatList.map(t => `<tr><td style="padding:3px 4px;border-bottom:1px solid #0f3460;">${t.unitId}</td><td style="text-align:right;padding:3px 4px;border-bottom:1px solid #0f3460;">${t.threat}</td></tr>`).join('')}</tbody></table>` : ''}
+                `;
+            } else if (tabName === 'Creature') {
+                let html = '';
+                if (detail.creatureInfo) {
+                    const ci = detail.creatureInfo;
+                    html += `<div class="field-row"><span class="field-label">Level Range</span><span class="field-value">${ci.levelMin} - ${ci.levelMax}</span></div>`;
+                    html += `<div class="field-row"><span class="field-label">Difficulty</span><span class="field-value">${ci.difficulty}</span></div>`;
+                    html += `<div class="field-row"><span class="field-label">Family</span><span class="field-value">${ci.family}</span></div>`;
+                }
+                if (detail.isVendor && detail.vendorInfo) {
+                    const vi = detail.vendorInfo;
+                    html += `<div style="margin-top:12px;font-size:12px;color:#8899aa;">Vendor Info:</div>`;
+                    html += `<div class="field-row"><span class="field-label">Buy Multiplier</span><span class="field-value">${vi.buyMultiplier}</span></div>`;
+                    html += `<div class="field-row"><span class="field-label">Sell Multiplier</span><span class="field-value">${vi.sellMultiplier}</span></div>`;
+                }
+                body.innerHTML = html || '<p style="color:#8899aa;">No creature data available.</p>';
+            } else if (tabName === 'Properties') {
+                const props = detail.properties || [];
+                if (!props.length) { body.innerHTML = '<p style="color:#8899aa;">No properties.</p>'; return; }
+                body.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr><th style="text-align:left;padding:4px;border-bottom:1px solid #0f3460;">Property</th><th style="text-align:right;padding:4px;border-bottom:1px solid #0f3460;">Base</th><th style="text-align:right;padding:4px;border-bottom:1px solid #0f3460;">Current</th></tr></thead>
+                    <tbody>${props.map(p => `<tr><td style="padding:3px 4px;border-bottom:1px solid rgba(15,52,96,0.5);">${p.property}</td><td style="text-align:right;padding:3px 4px;border-bottom:1px solid rgba(15,52,96,0.5);">${p.baseValue}</td><td style="text-align:right;padding:3px 4px;border-bottom:1px solid rgba(15,52,96,0.5);">${p.value}</td></tr>`).join('')}</tbody></table>`;
+            }
+        }
+
+        function adminRenderDetailActions(detail, type) {
+            const actions = document.getElementById('adminDetailActions');
+            let html = '';
+            if (type === 'NonPlayer' || detail.type === 'NonPlayer') {
+                html += `<button onclick="adminShowModal('Modify Display', '<div class=\\'form-group\\'><label>Display Info ID</label><input id=\\'adminDisplayIdInput\\' type=\\'number\\'></div>', () => adminModifyEntity(${detail.guid}, 'display'))">Modify Display</button>`;
+                html += `<button onclick="adminShowModal('Set Faction', '<div class=\\'form-group\\'><label>Faction ID (ushort)</label><input id=\\'adminFactionInput\\' type=\\'number\\'></div>', () => adminModifyEntity(${detail.guid}, 'faction'))">Set Faction</button>`;
+            }
+            actions.innerHTML = html;
+        }
+
+        async function adminModifyEntity(guid, type) {
+            const inputId = type === 'display' ? 'adminDisplayIdInput' : 'adminFactionInput';
+            const val = parseInt(document.getElementById(inputId).value);
+            if (isNaN(val)) return alert('Invalid value');
+            try {
+                await adminApi(`/entities/${guid}/${type}`, { method: 'PUT', body: JSON.stringify(type === 'display' ? { displayInfoId: val } : { factionId: val }) });
+                adminCloseModal();
+                adminShowEntityDetail(guid, 'NonPlayer');
+            } catch (e) { alert('Error: ' + e.message); }
+        }
+
+        function adminCloseEntityDetail() { document.getElementById('adminEntityDetailPanel').classList.remove('open'); }
+
+        // Online Players
+        async function adminLoadOnlinePlayers() {
+            try {
+                const players = await adminApi('/online');
+                const tbody = document.getElementById('adminOnlineList');
+                if (!players.length) { tbody.innerHTML = '<tr><td colspan="7" class="admin-loading">No online players</td></tr>'; return; }
+                tbody.innerHTML = players.map(p => `<tr onclick="adminShowPlayerDetail(${p.characterId}, ${p.position.x}, ${p.position.y}, ${p.position.z})">
+                    <td>${p.name}</td><td>${p.accountId}</td><td>${p.level}</td>
+                    <td>${p.race || '?'}</td><td>${p.characterClass || '?'}</td>
+                    <td>${p.worldId || '-'}</td>
+                    <td style="font-size:11px;">(${p.position.x.toFixed(0)}, ${p.position.y.toFixed(0)}, ${p.position.z.toFixed(0)})</td></tr>`).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function adminShowPlayerDetail(characterId, posX, posY, posZ) {
+            try {
+                const char = await adminApi(`/characters/${characterId}`);
+                const px = posX != null ? posX : (char.position ? char.position.x : 0);
+                const py = posY != null ? posY : (char.position ? char.position.y : 0);
+                const pz = posZ != null ? posZ : (char.position ? char.position.z : 0);
+                adminShowModal(`Character: ${char.name}`, `
+                    <div style="margin-bottom:8px;"><strong>Level:</strong> ${char.level} | <strong>Race:</strong> ${char.race || '?'} | <strong>Class:</strong> ${char.characterClass || '?'}</div>
+                    <div style="margin-bottom:8px;"><strong>Faction:</strong> ${char.factionId} | <strong>Online:</strong> ${char.isOnline ? 'Yes' : 'No'}</div>
+                    <div style="margin-bottom:8px;"><strong>XP:</strong> ${(char.totalXp || 0).toLocaleString()} | <strong>Played:</strong> ${((char.timePlayedTotal || 0) / 3600).toFixed(1)}h</div>
+                    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+                        <button class="btn-primary" onclick="adminShowModal('Add Item', '<div class=\\'form-group\\'><label>Item ID</label><input id=\\'adminItemIdInput\\' type=\\'number\\'></div><div class=\\'form-group\\'><label>Quantity</label><input id=\\'adminItemQtyInput\\' type=\\'number\\' value=1></div>', () => adminAddItem(${characterId}))">Add Item</button>
+                        <button class="btn-primary" onclick="adminShowModal('Teleport', '<div class=\\'form-group\\'><label>X</label><input id=\\'adminTpX\\' type=\\'number\\' value=\\'${px}\\'></div><div class=\\'form-group\\'><label>Y</label><input id=\\'adminTpY\\' type=\\'number\\' value=\\'${py}\\'></div><div class=\\'form-group\\'><label>Z</label><input id=\\'adminTpZ\\' type=\\'number\\' value=\\'${pz}\\'></div><div class=\\'form-group\\'><label>World ID</label><input id=\\'adminTpWorld\\' type=\\'number\\' value=\\'${char.worldId || 0}\\'></div>', () => adminTeleport(${characterId}))">Teleport</button>
+                        <button class="btn-primary" onclick="adminShowModal('Set Level', '<div class=\\'form-group\\'><label>Level</label><input id=\\'adminLevelInput\\' type=\\'number\\' value=50></div>', () => adminSetLevel(${characterId}))">Set Level</button>
+                    </div>
+                `, null);
+            } catch (e) { alert('Error: ' + e.message); }
+        }
+
+        async function adminAddItem(charId) {
+            const itemId = parseInt(document.getElementById('adminItemIdInput').value);
+            const qty = parseInt(document.getElementById('adminItemQtyInput').value) || 1;
+            if (isNaN(itemId)) return alert('Invalid item ID');
+            await adminApi(`/characters/${charId}/item`, { method: 'POST', body: JSON.stringify({ itemId, quantity: qty }) });
+            adminCloseModal();
+        }
+
+        async function adminTeleport(charId) {
+            const x = parseFloat(document.getElementById('adminTpX').value);
+            const y = parseFloat(document.getElementById('adminTpY').value);
+            const z = parseFloat(document.getElementById('adminTpZ').value);
+            const tpWorld = document.getElementById('adminTpWorld');
+            const worldId = tpWorld ? parseInt(tpWorld.value) || 0 : 0;
+            if ([x, y, z].some(isNaN)) return alert('Invalid coordinates');
+            try {
+                await adminApi(`/characters/${charId}/teleport`, { method: 'POST', body: JSON.stringify({ x, y, z, worldId }) });
+                adminCloseModal();
+            } catch (e) { alert('Error: ' + e.message); }
+        }
+
+        async function adminSetLevel(charId) {
+            const level = parseInt(document.getElementById('adminLevelInput').value);
+            if (isNaN(level) || level < 1 || level > 50) return alert('Invalid level (1-50)');
+            await adminApi(`/characters/${charId}/level`, { method: 'PUT', body: JSON.stringify({ level }) });
+            adminCloseModal();
+        }
+
+        // Accounts
+        async function adminLoadAccounts() {
+            const search = document.getElementById('adminAccountSearch').value.trim();
+            try {
+                const data = await adminApi(`/accounts${search ? `?search=${encodeURIComponent(search)}` : ''}`);
+                const tbody = document.getElementById('adminAccountList');
+                if (!data.accounts || !data.accounts.length) { tbody.innerHTML = '<tr><td colspan="4" class="admin-loading">No accounts found</td></tr>'; return; }
+                tbody.innerHTML = data.accounts.map(a => `<tr onclick="adminShowAccountDetail(${a.id})">
+                    <td>${a.id}</td><td>${a.email}</td><td style="font-size:11px;">${new Date(a.createTime).toLocaleDateString()}</td>
+                    <td>${a.isBanned ? '<span class="admin-badge admin-badge-banned">Banned</span>' : '<span class="admin-badge admin-badge-online">Active</span>'}</td></tr>`).join('');
+            } catch (e) { alert('Error: ' + e.message); }
+        }
+
+        async function adminShowAccountDetail(id) {
+            try {
+                const account = await adminApi(`/accounts/${id}`);
+                adminShowModal(`Account ${account.email}`, `
+                    <div style="margin-bottom:12px;"><strong>ID:</strong> ${account.id} | <strong>Created:</strong> ${new Date(account.createTime).toLocaleString()}</div>
+                    <div style="margin-bottom:8px;"><strong>Current Roles:</strong> ${(account.roles || []).map(r => r.name).join(', ') || 'None'}</div>
+                    <div style="margin-bottom:12px;"><strong>Role:</strong>
+                        <select id="adminRoleSelect" style="width:auto;display:inline-block;margin-left:8px;">
+                            <option value="1">Player</option>
+                            <option value="2">GameMaster</option>
+                            <option value="3">Administrator</option>
+                            <option value="4">Console</option>
+                            <option value="5">WebSocket</option>
+                        </select>
+                        <button class="btn-primary" style="margin-left:8px;padding:4px 10px;" onclick="adminSetAccountRole(${account.id})">Set</button>
+                    </div>
+                    <div style="margin-bottom:8px;"><strong>Bans:</strong> ${(account.suspensions || []).filter(s => s.isActive).map(s => `${s.reason} (${s.isPermanent ? 'permanent' : new Date(s.endTime).toLocaleString()})`).join(', ') || 'None'}</div>
+                    <div style="margin-top:16px;display:flex;gap:8px;">
+                        <button class="btn-danger" onclick="adminBanAccount(${account.id})">Ban</button>
+                        <button class="btn-secondary" onclick="adminUnbanAccount(${account.id})">Unban</button>
+                    </div>
+                `, null);
+                const sel = document.getElementById('adminRoleSelect');
+                if (account.roles && account.roles.length) sel.value = account.roles[0].roleId;
+            } catch (e) { adminCloseModal(); alert('Error: ' + e.message); }
+        }
+
+        async function adminSetAccountRole(accountId) {
+            const roleId = parseInt(document.getElementById('adminRoleSelect').value);
+            try {
+                await adminApi(`/accounts/${accountId}/role`, { method: 'PUT', body: JSON.stringify({ roleId }) });
+                adminCloseModal();
+                adminLoadAccounts();
+            } catch (e) { alert('Error: ' + e.message); }
+        }
+
+        async function adminBanAccount(id) {
+            adminShowModal('Ban Account', `
+                <div class="form-group"><label>Reason</label><textarea id="adminBanReason" placeholder="Ban reason..."></textarea></div>
+                <div class="form-group"><label>Duration (optional, leave empty for permanent)</label><input id="adminBanDuration" type="text" placeholder="e.g. 7 days or leave blank"></div>
+            `, async () => {
+                const reason = document.getElementById('adminBanReason').value;
+                if (!reason) return alert('Reason required');
+                let duration = null;
+                const durStr = document.getElementById('adminBanDuration').value.trim();
+                if (durStr) {
+                    const match = durStr.match(/(\d+)\s*(day|hour|min)/i);
+                    if (match) {
+                        const n = parseInt(match[1]);
+                        const unit = match[2].toLowerCase();
+                        if (unit === 'day') duration = `${n}:00:00:00`;
+                        else if (unit === 'hour') duration = `00:${n.toString().padStart(2,'0')}:00:00`;
+                        else if (unit === 'min') duration = `00:00:${n.toString().padStart(2,'0')}:00`;
+                    }
+                }
+                await adminApi(`/accounts/${id}/ban`, { method: 'POST', body: JSON.stringify({ reason, duration }) });
+                adminCloseModal();
+                adminLoadAccounts();
             });
+        }
+
+        async function adminUnbanAccount(id) {
+            if (!confirm('Unban this account?')) return;
+            await adminApi(`/accounts/${id}/unban`, { method: 'POST' });
+            adminLoadAccounts();
+        }
+
+        // Characters
+        async function adminLoadCharacters() {
+            const search = document.getElementById('adminCharSearch').value.trim();
+            try {
+                const data = await adminApi(`/characters${search ? `?name=${encodeURIComponent(search)}` : ''}`);
+                const tbody = document.getElementById('adminCharList');
+                if (!data.characters || !data.characters.length) { tbody.innerHTML = '<tr><td colspan="7" class="admin-loading">No characters found</td></tr>'; return; }
+                tbody.innerHTML = data.characters.map(c => `<tr onclick="adminShowCharDetail(${c.id})">
+                    <td>${c.id}</td><td>${c.name}</td><td>${c.accountId}</td>
+                    <td>${c.level}</td><td>${c.race || '?'}</td><td>${c.characterClass || '?'}</td>
+                    <td>${c.isOnline ? '<span class="admin-badge admin-badge-online">Online</span>' : '<span class="admin-badge admin-badge-offline">Offline</span>'}</td></tr>`).join('');
+            } catch (e) { alert('Error: ' + e.message); }
+        }
+
+        async function adminShowCharDetail(id) {
+            try {
+                const char = await adminApi(`/characters/${id}`);
+                adminShowModal(`Character ${char.name}`, `
+                    <div style="margin-bottom:8px;"><strong>Level:</strong> ${char.level} | <strong>Race:</strong> ${char.race || '?'} | <strong>Class:</strong> ${char.characterClass || '?'}</div>
+                    <div style="margin-bottom:8px;"><strong>Faction:</strong> ${char.factionId} | <strong>Online:</strong> ${char.isOnline ? 'Yes' : 'No'}</div>
+                    <div style="margin-bottom:8px;"><strong>XP:</strong> ${(char.totalXp || 0).toLocaleString()} | <strong>Played:</strong> ${((char.timePlayedTotal || 0) / 3600).toFixed(1)}h</div>
+                    <div style="margin-top:12px;display:flex;gap:8px;">
+                        <button class="btn-primary" onclick="adminShowModal('Add Item', '<div class=\\'form-group\\'><label>Item ID</label><input id=\\'adminItemIdInput\\' type=\\'number\\'></div><div class=\\'form-group\\'><label>Quantity</label><input id=\\'adminItemQtyInput\\' type=\\'number\\' value=1></div>', () => adminAddItem(${char.id}))">Add Item</button>
+                        <button class="btn-primary" onclick="adminShowModal('Teleport', '<div class=\\'form-group\\'><label>X</label><input id=\\'adminTpX\\' type=\\'number\\'></div><div class=\\'form-group\\'><label>Y</label><input id=\\'adminTpY\\' type=\\'number\\'></div><div class=\\'form-group\\'><label>Z</label><input id=\\'adminTpZ\\' type=\\'number\\'></div><div class=\\'form-group\\'><label>World ID</label><input id=\\'adminTpWorld\\' type=\\'number\\' value=0></div>', () => adminTeleport(${char.id}))">Teleport</button>
+                        <button class="btn-primary" onclick="adminShowModal('Set Level', '<div class=\\'form-group\\'><label>Level</label><input id=\\'adminLevelInput\\' type=\\'number\\' value=50></div>', () => adminSetLevel(${char.id}))">Set Level</button>
+                    </div>
+                `, null);
+            } catch (e) { alert('Error: ' + e.message); }
+        }
+
+        // Broadcast
+        async function adminSendBroadcast() {
+            const tier = document.getElementById('adminBroadcastTier').value;
+            const msg = document.getElementById('adminBroadcastMsg').value.trim();
+            if (!msg) return alert('Enter a message');
+            try {
+                await adminApi('/server/broadcast', { method: 'POST', body: JSON.stringify({ tier: parseInt(tier), message: msg }) });
+                document.getElementById('adminBroadcastMsg').value = '';
+                alert('Broadcast sent!');
+            } catch (e) { alert('Error: ' + e.message); }
+        }
+
+        // Instances
+        async function adminLoadInstances() {
+            try {
+                const instances = await adminApi('/instances');
+                const tbody = document.getElementById('adminInstancesList');
+                if (!instances.length) { tbody.innerHTML = '<tr><td colspan="8" class="admin-loading">No loaded instances</td></tr>'; return; }
+                tbody.innerHTML = instances.map(m => {
+                    let stateClass = 'admin-text-green';
+                    if (m.state === 'UnloadingPlayers' || m.state === 'UnloadingEntities') stateClass = 'admin-text-yellow';
+                    else if (m.state === 'Complete') stateClass = 'admin-text-red';
+                    const isInstance = !!m.instanceId;
+                    return `<tr onclick="${isInstance ? `adminGoToEntityByWorld(${m.worldId})` : ''}" style="cursor:${isInstance ? 'pointer' : 'default'}">
+                        <td>${m.worldId}</td><td>${m.name || 'Unknown'}</td><td>${m.typeName}</td>
+                        <td style="font-size:11px;word-break:break-all;">${m.instanceId || '-'}</td>
+                        <td class="${stateClass}">${m.state}</td>
+                        <td>${m.playerCount}</td><td>${m.entityCount}</td>
+                        <td>${isInstance ? `<button onclick="event.stopPropagation();adminUnloadInstance('${m.instanceId}')" style="padding:3px 8px;background:#6b2020;color:#e0e0e0;border:none;border-radius:3px;cursor:pointer;font-size:11px;">Unload</button>` : ''}</td></tr>`;
+                }).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function adminUnloadInstance(instanceId) {
+            if (!confirm('Unload map instance ' + instanceId + '?')) return;
+            try {
+                await adminApi(`/instances/${encodeURIComponent(instanceId)}/unload`, { method: 'DELETE' });
+                adminLoadInstances();
+            } catch (e) { alert('Error: ' + e.message); }
+        }
+
+        function adminGoToEntityByWorld(worldId) {
+            switchTab('adminEntities');
+            document.getElementById('adminWorldSelect').value = worldId;
+            adminLoadEntities();
+        }
+
+        // Modal helpers
+        function adminShowModal(title, contentHtml, onConfirm) {
+            document.getElementById('adminModalTitle').textContent = title;
+            document.getElementById('adminModalContent').innerHTML = contentHtml;
+            const confirmBtn = document.getElementById('adminModalConfirm');
+            if (onConfirm) {
+                confirmBtn.onclick = async () => { await onConfirm(); };
+                confirmBtn.style.display = '';
+            } else {
+                confirmBtn.style.display = 'none';
+            }
+            document.getElementById('adminModalOverlay').classList.add('open');
+        }
+
+        function adminCloseModal() { document.getElementById('adminModalOverlay').classList.remove('open'); }
+
+        // Tab Management
+
+        function switchTab(tab) {
+            if (state.currentTab === tab) return;
+            state.currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.toggle('active', t.id.replace('Tab', '') === tab || t.id.startsWith(tab)));
+            if (tab === 'console') {
+                if (!socket || socket.readyState !== WebSocket.OPEN) connectWebSocket();
+            } else if (tab.startsWith('admin')) {
+                disconnectWebSocket();
+                updateState();
+                if (tab === 'adminServer') adminLoadServerStatus();
+                if (tab === 'adminEntities') adminLoadWorlds();
+                if (tab === 'adminOnline') adminLoadOnlinePlayers();
+                if (tab === 'adminAccounts') adminLoadAccounts();
+                if (tab === 'adminCharacters') adminLoadCharacters();
+                if (tab === 'adminInstances') adminLoadInstances();
+            } else {
+                disconnectWebSocket();
+                updateState();
+            }
+        }
+
+        // ============================================================
+        // Init
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            updateState();
+            loadTables();
+            adminLoadWorlds();
+            adminLoadServerStatus();
+            setInterval(adminLoadOnlinePlayers, 30000);
+        });
     </script>
 </body>
-</html>  
+</html>

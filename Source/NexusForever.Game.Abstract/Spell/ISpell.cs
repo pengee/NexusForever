@@ -9,7 +9,9 @@ namespace NexusForever.Game.Abstract.Spell
         ISpellParameters Parameters { get; }
         uint CastingId { get; }
         bool IsCasting { get; }
+        bool IsExecuting { get; }
         bool IsFinished { get; }
+        bool IsChanneled { get; }
 
         IUnitEntity Caster { get; }
 

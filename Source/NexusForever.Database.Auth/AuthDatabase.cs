@@ -263,5 +263,90 @@ namespace NexusForever.Database.Auth
 
             context.SaveChanges();
         }
+
+        /// <summary>
+        /// List accounts with optional search filter and pagination.
+        /// </summary>
+        public async Task<(List<AccountModel> Accounts, int Total)> GetAccountsAsync(string? emailFilter = null, int offset = 0, int limit = 50)
+        {
+            using var context = new AuthContext(config);
+
+            IQueryable<AccountModel> query = context.Account.AsNoTracking();
+            if (!string.IsNullOrEmpty(emailFilter))
+                query = query.Where(a => a.Email.Contains(emailFilter));
+
+            int total = await query.CountAsync();
+            List<AccountModel> accounts = await query
+                .OrderByDescending(a => a.CreateTime)
+                .Skip(offset).Take(limit)
+                .Include(a => a.AccountRole).ThenInclude(ar => ar.Role)
+                .ToListAsync();
+
+            return (accounts, total);
+        }
+
+        /// <summary>
+        /// Get account by ID with full relationship includes.
+        /// </summary>
+        public async Task<AccountModel?> GetAccountByIdAsync(uint id)
+        {
+            using var context = new AuthContext(config);
+            return await context.Account
+                .AsNoTracking()
+                .Include(a => a.AccountRole).ThenInclude(ar => ar.Role)
+                .Include(a => a.AccountSuspension)
+                .Include(a => a.AccountPermission).ThenInclude(ap => ap.Permission)
+                .FirstOrDefaultAsync(a => a.Id == id);
+        }
+
+        /// <summary>
+        /// End all active bans for an account.
+        /// </summary>
+        public void UnbanAccount(uint accountId)
+        {
+            using var context = new AuthContext(config);
+            var suspensions = context.AccountSuspension
+                .Where(s => s.Id == accountId && (s.EndTime == null || s.EndTime > DateTime.UtcNow))
+                .ToList();
+
+            foreach (var suspension in suspensions)
+                suspension.EndTime = DateTime.UtcNow;
+
+            context.SaveChanges();
+        }
+
+        /// <summary>
+        /// Delete an account by its ID.
+        /// </summary>
+        public bool DeleteAccountById(uint id)
+        {
+            using var context = new AuthContext(config);
+            AccountModel? account = context.Account.FirstOrDefault(a => a.Id == id);
+            if (account == null)
+                return false;
+
+            return DeleteAccount(account.Email);
+        }
+
+        /// <summary>
+        /// Set the primary role for an account.
+        /// </summary>
+        public void SetPrimaryRole(uint accountId, uint roleId)
+        {
+            using var context = new AuthContext(config);
+            AccountModel? account = context.Account
+                .Include(a => a.AccountRole)
+                .FirstOrDefault(a => a.Id == accountId);
+
+            if (account != null)
+            {
+                account.AccountRole.Clear();
+                account.AccountRole.Add(new AccountRoleModel
+                {
+                    RoleId = roleId
+                });
+                context.SaveChanges();
+            }
+        }
     }
 }

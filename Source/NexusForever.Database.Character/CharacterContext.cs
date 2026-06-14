@@ -12,6 +12,7 @@ namespace NexusForever.Database.Character
         public DbSet<CharacterActionSetShortcutModel> CharacterActionSetShortcut { get; set; }
         public DbSet<CharacterAppearanceModel> CharacterAppearance { get; set; }
         public DbSet<CharacterBoneModel> CharacterBone { get; set; }
+        public DbSet<CharacterBuffModel> CharacterBuff { get; set; }
         public DbSet<CharacterCostumeModel> CharacterCostume { get; set; }
         public DbSet<CharacterCostumeItemModel> CharacterCostumeItem { get; set; }
         public DbSet<CharacterCreateModel> CharacterCreate { get; set; }
@@ -402,6 +403,49 @@ namespace NexusForever.Database.Character
                     .WithMany(p => p.Bone)
                     .HasForeignKey(d => d.Id)
                     .HasConstraintName("FK_character_bone_id__character_id");
+            });
+
+            modelBuilder.Entity<CharacterBuffModel>(entity =>
+            {
+                entity.ToTable("character_buff");
+
+                entity.HasKey(e => new { e.Id, e.Spell4BaseId })
+                    .HasName("PRIMARY");
+
+                entity.Property(e => e.Id)
+                    .HasColumnName("id")
+                    .HasColumnType("bigint(20) unsigned")
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.Spell4BaseId)
+                    .HasColumnName("spell4BaseId")
+                    .HasColumnType("int(10) unsigned")
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.CasterGuid)
+                    .HasColumnName("casterGuid")
+                    .HasColumnType("int(10) unsigned")
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.StackCount)
+                    .HasColumnName("stackCount")
+                    .HasColumnType("int(10) unsigned")
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.DurationRemaining)
+                    .HasColumnName("durationRemaining")
+                    .HasColumnType("double")
+                    .HasDefaultValue(0d);
+
+                entity.Property(e => e.TickRemaining)
+                    .HasColumnName("tickRemaining")
+                    .HasColumnType("double")
+                    .HasDefaultValue(0d);
+
+                entity.HasOne(d => d.Character)
+                    .WithMany(p => p.Buff)
+                    .HasForeignKey(d => d.Id)
+                    .HasConstraintName("FK_character_buff_id__character_id");
             });
 
             modelBuilder.Entity<CharacterCostumeModel>(entity =>

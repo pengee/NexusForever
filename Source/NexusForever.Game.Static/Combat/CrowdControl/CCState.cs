@@ -1,4 +1,5 @@
-﻿namespace NexusForever.Game.Static.Combat.CrowdControl
+﻿// ReSharper disable InconsistentNaming
+namespace NexusForever.Game.Static.Combat.CrowdControl
 {
     public enum CCState
     {

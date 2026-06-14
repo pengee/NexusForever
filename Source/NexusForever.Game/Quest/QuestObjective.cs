@@ -5,6 +5,7 @@ using NexusForever.Game.Abstract.Entity;
 using NexusForever.Game.Abstract.Quest;
 using NexusForever.Game.Static.Quest;
 using NexusForever.GameTable.Model;
+using NexusForever.Shared.Game;
 
 namespace NexusForever.Game.Quest
 {
@@ -48,6 +49,8 @@ namespace NexusForever.Game.Quest
 
         private uint? timer;
 
+        private UpdateTimer updateTimer;
+
         private QuestObjectiveSaveMask saveMask;
 
         private readonly IPlayer player;
@@ -64,6 +67,9 @@ namespace NexusForever.Game.Quest
             Index         = model.Index;
             progress      = model.Progress;
             timer         = model.Timer;
+
+            if (timer.HasValue)
+                updateTimer = new UpdateTimer(timer.Value / 1000d);
         }
 
         /// <summary>
@@ -79,7 +85,8 @@ namespace NexusForever.Game.Quest
 
             if (objectiveInfo.Entry.MaxTimeAllowedMS != 0u)
             {
-                // TODO
+                updateTimer = new UpdateTimer(objectiveInfo.Entry.MaxTimeAllowedMS / 1000d);
+                timer = (uint)(updateTimer.Time * 1000d);
             }
 
             saveMask = QuestObjectiveSaveMask.Create;
@@ -97,7 +104,8 @@ namespace NexusForever.Game.Quest
                     Id       = player.CharacterId,
                     QuestId  = (ushort)QuestInfo.Entry.Id,
                     Index    = Index,
-                    Progress = Progress
+                    Progress = Progress,
+                    Timer    = Timer
                 });
             }
             else
@@ -118,7 +126,8 @@ namespace NexusForever.Game.Quest
 
                 if ((saveMask & QuestObjectiveSaveMask.Timer) != 0)
                 {
-                    // TODO
+                    model.Timer = Timer;
+                    entity.Property(p => p.Timer).IsModified = true;
                 }
             }
 
@@ -127,7 +136,17 @@ namespace NexusForever.Game.Quest
 
         public void Update(double lastTick)
         {
-            // TODO: update timer
+            if (updateTimer != null)
+            {
+                updateTimer.Update(lastTick);
+                timer = (uint)(updateTimer.Time * 1000d);
+                saveMask |= QuestObjectiveSaveMask.Timer;
+
+                if (updateTimer.HasElapsed)
+                {
+                    Progress = 0u;
+                }
+            }
         }
 
         private bool IsDynamic()
@@ -170,6 +189,14 @@ namespace NexusForever.Game.Quest
         public void Complete()
         {
             Progress = GetMaxValue();
+        }
+
+        /// <summary>
+        /// Initialise the objective update timer.
+        /// </summary>
+        public void InitialiseTimer()
+        {
+            updateTimer = new UpdateTimer(timer.Value / 1000d);
         }
     }
 }

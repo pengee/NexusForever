@@ -174,6 +174,18 @@ namespace NexusForever.Game.Map
         }
 
         /// <summary>
+        /// Add <see cref="IGridEntity"/> to <see cref="IBaseMap"/> immediately and return the assigned guid.
+        /// </summary>
+        public uint AddImmediate(IGridEntity entity, Vector3 position)
+        {
+            if (!CanAddEntity(entity, position))
+                return 0u;
+
+            AddEntity(entity, position);
+            return entity.Guid;
+        }
+
+        /// <summary>
         /// Enqueue <see cref="IGridEntity"/> to be added to <see cref="IBaseMap"/>.
         /// </summary>
         /// <remarks>
@@ -211,7 +223,10 @@ namespace NexusForever.Game.Map
         public virtual bool CanEnter(IGridEntity entity, IMapPosition position)
         {
             if (!IsValidPosition(position.Position))
+            {
+                log.Warn($"Entity {entity} rejected from map {Entry?.Id}: position {position.Position} is out of valid bounds.");
                 return false;
+            }
 
             return true;
         }
@@ -328,6 +343,12 @@ namespace NexusForever.Game.Map
             return (T)entity;
         }
 
+        public IEnumerable<IGridEntity> GetAllEntities()
+        {
+            foreach (IGridEntity entity in entities.Values)
+                yield return entity;
+        }
+
         /// <summary>
         /// Enqueue broadcast of <see cref="IWritable"/> to all <see cref="IPlayer"/>'s on the map.
         /// </summary>
@@ -412,8 +433,17 @@ namespace NexusForever.Game.Map
         {
             foreach (EntityModel model in entityCache.GetEntities(gridX, gridZ))
             {
-                IWorldEntity entity = entityFactory.CreateWorldEntity(model.Type);
-                entity.Initialise(model);
+                IWorldEntity entity;
+                try
+                {
+                    entity = entityFactory.CreateWorldEntity(model.Type);
+                    entity.Initialise(model);
+                }
+                catch (Exception ex)
+                {
+                    log.Warn(ex, $"Failed to initialise entity {model.Id} (Type: {model.Type}, Creature: {model.Creature}) in grid ({gridX}, {gridZ}). Skipping.");
+                    continue;
+                }
 
                 var position = new MapPosition
                 {
@@ -458,6 +488,12 @@ namespace NexusForever.Game.Map
             scriptCollection?.Invoke<IMapScript>(s => s.OnAddToMap(entity));
 
             log.Trace($"Added entity {entity.Guid} to map {Entry.Id} at {vector.X},{vector.Y},{vector.Z}.");
+        }
+        
+        public void ForceAddImmediate(IGridEntity anchorEntity, Vector3 mapPosition)
+        {
+            if(anchorEntity is not { Map: null }){ return; }
+            AddEntity(anchorEntity, mapPosition);
         }
 
         protected virtual void RemoveEntity(IGridEntity entity)

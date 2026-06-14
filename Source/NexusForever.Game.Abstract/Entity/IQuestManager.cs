@@ -98,5 +98,20 @@ namespace NexusForever.Game.Abstract.Entity
         /// Returns a collection of all active quests.
         /// </summary>
         IEnumerable<IQuest> GetActiveQuests();
+
+        /// <summary>
+        /// Return the active <see cref="IQuest"/> with the supplied quest id.
+        /// </summary>
+        IQuest GetActiveQuest(ushort questId);
+
+        /// <summary>
+        /// Add a quest from supplied quest id, skipping validation.
+        /// </summary>
+        void QuestAdd(ushort questId);
+
+        /// <summary>
+        /// Complete an achieved quest, moving it to the completed dictionary.
+        /// </summary>
+        void QuestComplete(ushort questId);
     }
 }

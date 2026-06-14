@@ -105,7 +105,7 @@ namespace NexusForever.Game.Entity.Movement.Spline
         /// </remarks>
         private void CalculateOffsets()
         {
-            float v12 = Type.Length / Speed;
+            float v12 = Math.Max(Type.Length, 0.0001f) / Speed;
             float v12WithDelay = v12 + Type.DelayLength;
             float v14 = v12 / Points[^2].FrameTime;
             float v15 = 1f / v12WithDelay;

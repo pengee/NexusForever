@@ -11,6 +11,7 @@
         AccountCurrency      = 7,
         AccountGenericUnlock = 8,
         GenericUnlock        = 9,
-        RotationEssence      = 10
+        RotationEssence      = 10,
+        SpellShortcut        = 11
     }
 }

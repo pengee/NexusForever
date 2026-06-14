@@ -1,11 +1,12 @@
-﻿using System.Diagnostics;
+﻿using System.Collections;
+using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using NexusForever.Shared;
 
 namespace NexusForever.GameTable
 {
-    public class GameTable<T> where T : class, new()
+    public class GameTable<T> : IGameTable where T : class, new()
     {
         private const int minimumBufferSize = 1024;
         private const int maximumBufferSize = 16 * 1024;
@@ -262,5 +263,17 @@ namespace NexusForever.GameTable
 
             return Entries[lookupId];
         }
+
+        #region IGameTable
+
+        Type IGameTable.EntryType => typeof(T);
+
+        object IGameTable.GetEntry(ulong id) => GetEntry(id);
+
+        int IGameTable.Count => Entries?.Length ?? 0;
+
+        IEnumerable IGameTable.AllEntries => Entries ?? Array.Empty<T>();
+
+        #endregion
     }
 }

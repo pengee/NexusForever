@@ -114,8 +114,14 @@ namespace NexusForever.Script
                 if (!assemblyInfo.Reload.HasValue)
                     continue;
 
-                Reload(assemblyInfo, assemblyInfo.Reload.Value);
-                assemblyInfo.Reload = null;
+                try
+                {
+                    Reload(assemblyInfo, assemblyInfo.Reload.Value);
+                }
+                finally
+                {
+                    assemblyInfo.Reload = null;
+                }
             }
         }
 
@@ -204,8 +210,27 @@ namespace NexusForever.Script
         private void InitialiseScriptCollection(IScriptCollection collection, IScriptFilterSearch search)
         {
             collection.Initialise(search);
-            foreach (IScriptInfo scriptInfo in FilterScripts(collection.Search))
+
+            List<IScriptInfo> matchedScripts = FilterScripts(collection.Search).ToList();
+            bool hasExplicit = matchedScripts.Any(s => !s.IsDefault);
+
+            uint? creature = collection.Search.CreatureId;
+            if (creature != null)
             {
+                Console.WriteLine($"[DBG] ScriptCollection for CreatureId={creature}: matched={string.Join(",", matchedScripts.Select(s => s.Name))} hasExplicit={hasExplicit}");
+            }
+
+            foreach (IScriptInfo scriptInfo in matchedScripts)
+            {
+                if (scriptInfo.IsDefault && hasExplicit)
+                {
+                    log.LogTrace("Skipped default script {Name} because an explicit script exists.", scriptInfo.Name);
+                    Console.WriteLine($"[DBG] Skipped default script {scriptInfo.Name}");
+                    continue;
+                }
+
+                Console.WriteLine($"[DBG] Loading script {scriptInfo.Name} (IsDefault={scriptInfo.IsDefault})");
+
                 try
                 {
                     scriptInfo.Load(collection);
@@ -239,7 +264,8 @@ namespace NexusForever.Script
             InitialiseScriptCollection(collection, new ScriptFilterSearch()
                 .FilterByScriptType<IOwnedScript<T>>()
                 .FilterById(entity.EntityId)
-                .FilterByCreatureId(entity.CreatureId));
+                .FilterByCreatureId(entity.CreatureId)
+                .FilterByScriptNames(entity.ScriptNames));
                 //.FilterByTargetGroupId());
 
             return collection;

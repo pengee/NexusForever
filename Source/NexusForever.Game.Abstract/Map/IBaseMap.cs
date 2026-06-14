@@ -20,6 +20,11 @@ namespace NexusForever.Game.Abstract.Map
         IPublicEventManager PublicEventManager { get; }
 
         /// <summary>
+        /// Add <see cref="IGridEntity"/> to <see cref="IBaseMap"/> immediately and return the assigned guid.
+        /// </summary>
+        uint AddImmediate(IGridEntity entity, Vector3 position);
+
+        /// <summary>
         /// Enqueue <see cref="IGridEntity"/> to be removed from <see cref="IBaseMap"/>.
         /// </summary>
         void EnqueueRemove(IGridEntity entity);
@@ -65,6 +70,11 @@ namespace NexusForever.Game.Abstract.Map
         float? GetTerrainHeight(float x, float z);
 
         /// <summary>
+        /// Return all entities on this map, regardless of type.
+        /// </summary>
+        IEnumerable<IGridEntity> GetAllEntities();
+
+        /// <summary>
         /// Return <see cref="ResurrectionType"/> applicable to this map.
         /// </summary>
         ResurrectionType GetResurrectionType();
@@ -73,5 +83,12 @@ namespace NexusForever.Game.Abstract.Map
         /// Invoked when <see cref="IPublicEvent"/> finishes with the winning <see cref="IPublicEventTeam"/>.
         /// </summary>
         void OnPublicEventFinish(IPublicEvent publicEvent, IPublicEventTeam publicEventTeam);
+        
+        /// <summary>
+        /// Bypassed the update process to get immediate entity guid
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <param name="mapPosition"></param>
+        void ForceAddImmediate(IGridEntity entity, Vector3 mapPosition);
     }
 }

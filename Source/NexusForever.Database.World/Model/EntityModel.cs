@@ -23,6 +23,7 @@ namespace NexusForever.Database.World.Model
         public byte QuestChecklistIdx { get; set; }
         public ulong ActivePropId { get; set; }
         public ushort WorldSocketId { get; set; }
+        public byte Mode { get; set; }
 
         public EntityEventModel EntityEvent { get; set; }
         public EntitySplineModel EntitySpline { get; set; }
@@ -30,5 +31,7 @@ namespace NexusForever.Database.World.Model
         public ICollection<EntityStatModel> EntityStat { get; set; } = new HashSet<EntityStatModel>();
         public ICollection<EntityVendorCategoryModel> EntityVendorCategory { get; set; } = new HashSet<EntityVendorCategoryModel>();
         public ICollection<EntityVendorItemModel> EntityVendorItem { get; set; } = new HashSet<EntityVendorItemModel>();
+        public ICollection<EntityScriptModel> EntityScript { get; set; } = new HashSet<EntityScriptModel>();
+        public ICollection<EntityPropertyModel> EntityProperty { get; set; } = new HashSet<EntityPropertyModel>();
     }
 }

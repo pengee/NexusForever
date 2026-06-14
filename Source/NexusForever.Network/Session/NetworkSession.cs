@@ -26,8 +26,9 @@ namespace NexusForever.Network.Session
         /// <remarks>
         /// If <see cref="SocketHeartbeat"/> flatlines the <see cref="NetworkSession"/> will be disconnected.
         /// </remarks>
-        public SocketHeartbeat Heartbeat { get; } = new();
+        public SocketHeartbeat Heartbeat { get; }
 
+        private readonly double sessionTimeout;
         private Socket socket;
         private readonly byte[] buffer = new byte[4096];
         private int bufferOffset;
@@ -37,6 +38,12 @@ namespace NexusForever.Network.Session
         /// <summary>
         /// Initialise <see cref="NetworkSession"/> with new <see cref="Socket"/> and begin listening for data.
         /// </summary>
+        protected NetworkSession(double sessionTimeout)
+        {
+            this.sessionTimeout        = sessionTimeout;
+            Heartbeat             = new SocketHeartbeat(sessionTimeout);
+        }
+
         public virtual void OnAccept(Socket newSocket)
         {
             if (socket != null)

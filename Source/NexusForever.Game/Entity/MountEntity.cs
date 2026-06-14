@@ -3,6 +3,7 @@ using NexusForever.Game.Abstract.Entity;
 using NexusForever.Game.Abstract.Entity.Movement;
 using NexusForever.Game.Abstract.Map;
 using NexusForever.Game.Static.Entity;
+using NexusForever.Game.Static.Spell;
 using NexusForever.GameTable;
 using NexusForever.GameTable.Model;
 using NexusForever.Network.World.Entity;
@@ -120,7 +121,11 @@ namespace NexusForever.Game.Entity
             }
 
             if (PilotDisplayInfo != null)
+            {
                 player.RemoveVisual(ItemSlot.Mount);
+            }
+            
+            player.BuffManager.RemoveBuffsByEffectType(SpellEffectType.SummonMount);
         }
     }
 }

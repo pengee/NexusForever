@@ -5,5 +5,6 @@
     /// </summary>
     public interface ICreatureEntity : IUnitEntity
     {
+        IEnumerable<ICreatureSpellEntry> CreatureSpells { get; }
     }
 }

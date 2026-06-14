@@ -165,6 +165,8 @@
         CreatureScientistScanMultiplier             = 189,
         ScientistScanBotCooldownMultiplier          = 190,
         MountSpeedMultiplier                        = 191,
+        RatingCritDeflectIncrease                   = 197,
+        RatingCritMitigationIncrease                = 198,
         BaseGlanceAmount                            = 195,
         BaseVigor                                   = 196
     }

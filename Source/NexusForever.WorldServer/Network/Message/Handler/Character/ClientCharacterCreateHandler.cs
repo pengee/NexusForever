@@ -172,6 +172,9 @@ namespace NexusForever.WorldServer.Network.Message.Handler.Character
                 character.LocationX = startingLocation.Position.X;
                 character.LocationY = startingLocation.Position.Y;
                 character.LocationZ = startingLocation.Position.Z;
+                character.RotationX = startingLocation.Rotation.X;
+                character.RotationY = startingLocation.Rotation.Y;
+                character.RotationZ = startingLocation.Rotation.Z;
                 character.WorldId = (ushort)startingLocation.World.Id;
 
                 character.ActiveSpec = 0;

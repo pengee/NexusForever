@@ -36,6 +36,7 @@
         LAS                  = 31,
         BuildSwitch          = 32,
         Datacube             = 33,
+        Glance               = 34,
         HealingAbsorption    = 35,
     }
 }

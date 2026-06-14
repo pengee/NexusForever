@@ -5,6 +5,7 @@ using NexusForever.Game.Abstract.Entity;
 using NexusForever.Game.Abstract.Entity.Movement;
 using NexusForever.Game.Abstract.Map;
 using NexusForever.Game.Abstract.Reputation;
+using NexusForever.Game.Abstract.Spell;
 using NexusForever.Game.Chat;
 using NexusForever.Game.Map.Search;
 using NexusForever.Game.Reputation;
@@ -18,6 +19,7 @@ using NexusForever.Network.Message;
 using NexusForever.Network.World.Entity;
 using NexusForever.Network.World.Message.Model;
 using NexusForever.Network.World.Message.Model.Shared;
+using NexusForever.Script;
 using NexusForever.Script.Template;
 
 namespace NexusForever.Game.Entity
@@ -75,8 +77,10 @@ namespace NexusForever.Game.Entity
         public Faction Faction1 { get; set; }
         public Faction Faction2 { get; set; }
 
+        public byte QuestChecklistIdx { get; protected set; }
         public ulong ActivePropId { get; private set; }
         public ushort WorldSocketId { get; private set; }
+        public List<string> ScriptNames { get; set; } = new();
 
         public EntitySplineModel Spline { get; private set; }
 
@@ -124,7 +128,7 @@ namespace NexusForever.Game.Entity
 
         public uint InterruptArmor
         {
-            get => GetStatInteger(Stat.InterruptArmour) ?? 1u;
+            get => (GetStatInteger(Stat.InterruptArmour) ?? 0u);
             set => SetStat(Stat.InterruptArmour, value);
         }
 
@@ -228,7 +232,10 @@ namespace NexusForever.Game.Entity
             Faction2      = (Faction)model.Faction2;
             ActivePropId  = model.ActivePropId;
             WorldSocketId = model.WorldSocketId;
-            Spline        = model.EntitySpline;
+            ScriptNames       = model.EntityScript?.Select(s => s.ScriptName).ToList() ?? new List<string>();
+            QuestChecklistIdx = model.QuestChecklistIdx;
+            Spline            = model.EntitySpline;
+            scriptCollection  = ScriptManager.Instance.InitialiseEntityScripts<IWorldEntity>(this);
 
             foreach (EntityStatModel statModel in model.EntityStat)
                 stats.Add((Stat)statModel.Stat, new StatValue(statModel));
@@ -346,6 +353,42 @@ namespace NexusForever.Game.Entity
                 OutfitInfo   = OutfitInfo
             };
 
+            if (this is IUnitEntity unitEntity)
+            {
+                List<IBuff> iconBuffs = unitEntity.BuffManager.GetBuffs()
+                    .Where(b => b.HasIcon)
+                    .ToList();
+
+                foreach (IGrouping<uint, IBuff> group in iconBuffs.GroupBy(b => b.CastingId))
+                {
+                    IBuff first = group.First();
+                    var spellInit = new ServerEntityCreate.SpellInit
+                    {
+                        CastingId = first.CastingId,
+                        Spell4Id  = first.SpellInfo.Entry.Id,
+                        CasterId  = first.Caster.Guid
+                    };
+
+                    foreach (IBuff buff in group)
+                    {
+                        spellInit.EffectInfoData.Add(new TargetInfo.EffectInfo
+                        {
+                            Spell4EffectId = buff.EffectEntry.Id,
+                            EffectUniqueId = buff.EffectId,
+                            TimeRemaining  = buff.DurationRemaining > 0d
+                                ? (int)Math.Ceiling(buff.DurationRemaining)
+                                : -1
+                        });
+                    }
+
+                    entityCreatePacket.SpellInitData.Add(spellInit);
+                }
+
+                entityCreatePacket.CurrentSpellUniqueId = iconBuffs.Count > 0
+                    ? iconBuffs.Max(b => b.CastingId)
+                    : 0u;
+            }
+
             // Plugs should not have this portion of the packet set by this Class. The Plug Class should set it itself.
             // This is in large part due to the way Plugs are tied either to a DecorId OR Guid. Other entities do not have the same issue.
             if (!(this is IPlugEntity))
@@ -371,7 +414,7 @@ namespace NexusForever.Game.Entity
         /// </summary>
         public virtual void OnActivate(IPlayer activator)
         {
-            // deliberately empty
+            scriptCollection?.Invoke<IWorldEntityScript>(s => s.OnActivate(activator));
         }
 
         /// <summary>
@@ -379,7 +422,7 @@ namespace NexusForever.Game.Entity
         /// </summary>
         public virtual void OnActivateCast(IPlayer activator)
         {
-            // deliberately empty
+            scriptCollection?.Invoke<IWorldEntityScript>(s => s.OnActivate(activator));
         }
 
         /// <summary>

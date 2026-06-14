@@ -9,6 +9,11 @@ namespace NexusForever.MapGenerator.GameTable
     public sealed class GameTableManager : Singleton<GameTableManager>
     {
         public GameTable<WorldEntry> World { get; private set; }
+        public GameTable<MapZoneEntry> MapZone { get; private set; }
+        public GameTable<MapZoneHexEntry> MapZoneHex { get; private set; }
+        public GameTable<MapZoneHexGroupEntry> MapZoneHexGroup { get; private set; }
+        public GameTable<MapZoneHexGroupEntryEntry> MapZoneHexGroupEntry { get; private set; }
+        public GameTable<MapZoneWorldJoinEntry> MapZoneWorldJoin { get; private set; }
 
         public GameTableManager()
         {
@@ -17,6 +22,11 @@ namespace NexusForever.MapGenerator.GameTable
         public void Initialise()
         {
             World = LoadGameTable<WorldEntry>("World.tbl");
+            MapZone = LoadGameTable<MapZoneEntry>("MapZone.tbl");
+            MapZoneHex = LoadGameTable<MapZoneHexEntry>("MapZoneHex.tbl");
+            MapZoneHexGroup = LoadGameTable<MapZoneHexGroupEntry>("MapZoneHexGroup.tbl");
+            MapZoneHexGroupEntry = LoadGameTable<MapZoneHexGroupEntryEntry>("MapZoneHexGroupEntry.tbl");
+            MapZoneWorldJoin = LoadGameTable<MapZoneWorldJoinEntry>("MapZoneWorldJoin.tbl");
         }
 
         /// <summary>

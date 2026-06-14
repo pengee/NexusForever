@@ -4,6 +4,7 @@ using NexusForever.Game.Abstract.Housing;
 using NexusForever.Game.Abstract.Map.Lock;
 using NexusForever.Game.Abstract.Matching.Match;
 using NexusForever.Game.Static.Map.Lock;
+using NexusForever.Game.Static.Reputation;
 using NexusForever.Shared;
 
 namespace NexusForever.Game.Map.Lock
@@ -14,6 +15,7 @@ namespace NexusForever.Game.Map.Lock
         private readonly ConcurrentDictionary<Identity, IMapLockCollection> soloLocks = [];
         private readonly ConcurrentDictionary<Guid, IMapLockCollection> matchLocks = [];
         private readonly ConcurrentDictionary<ulong, IResidenceMapLock> residenceLocks = [];
+        private readonly ConcurrentDictionary<Faction, ITutorialMapLock> tutorialLocks = [];
 
         #region Dependency Injection
 
@@ -112,6 +114,20 @@ namespace NexusForever.Game.Map.Lock
             mapLock = CreateLock<IResidenceMapLock>(MapLockType.Residence, 0u);
             mapLock.Initialise(residence.Id);
             residenceLocks[residence.Id] = mapLock;
+            return mapLock;
+        }
+
+        /// <summary>
+        /// Return the <see cref="IMapLock"/> for the tutorial world for the supplied <see cref="Faction"/>.
+        /// </summary>
+        public IMapLock GetTutorialLock(Faction faction)
+        {
+            if (tutorialLocks.TryGetValue(faction, out ITutorialMapLock mapLock))
+                return mapLock;
+
+            mapLock = CreateLock<ITutorialMapLock>(MapLockType.Tutorial, 0u);
+            mapLock.Initialise(faction);
+            tutorialLocks[faction] = mapLock;
             return mapLock;
         }
     }

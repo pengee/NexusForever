@@ -11,6 +11,9 @@ namespace NexusForever.Database.World
     {
         public DbSet<DisableModel> Disable { get; set; }
         public DbSet<EntityModel> Entity { get; set; }
+        public DbSet<EntityScriptModel> EntityScript { get; set; }
+        public DbSet<EntityPropertyModel> EntityProperty { get; set; }
+        public DbSet<CreatureInfoPropertyModel> CreatureInfoProperty { get; set; }
         public DbSet<EntityEventModel> EventEntity { get; set; }
         public DbSet<EntitySplineModel> EntitySpline { get; set; }
         public DbSet<EntityStatModel> EntityStat { get; set; }
@@ -56,13 +59,11 @@ namespace NexusForever.Database.World
 
                 entity.Property(e => e.Type)
                     .HasColumnName("type")
-                    .HasColumnType("tinyint(3) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("tinyint(3) unsigned");
 
                 entity.Property(e => e.ObjectId)
                     .HasColumnName("objectId")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.Note)
                     .IsRequired()
@@ -82,18 +83,15 @@ namespace NexusForever.Database.World
 
                 entity.Property(e => e.Id)
                     .HasColumnName("id")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.Phase)
                     .HasColumnName("phase")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.EventId)
                     .HasColumnName("eventId")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.HasOne(d => d.Entity)
                     .WithOne(p => p.EntityEvent)
@@ -107,8 +105,7 @@ namespace NexusForever.Database.World
 
                 entity.Property(e => e.Id)
                     .HasColumnName("id")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.ActivePropId)
                     .HasColumnName("activePropId")
@@ -139,6 +136,11 @@ namespace NexusForever.Database.World
                     .HasColumnName("faction2")
                     .HasColumnType("smallint(5) unsigned")
                     .HasDefaultValue(0);
+
+                entity.Property(e => e.Mode)
+                    .HasColumnName("mode")
+                    .HasColumnType("tinyint(3) unsigned")
+                    .HasDefaultValue((byte)0);
 
                 entity.Property(e => e.OutfitInfo)
                     .HasColumnName("outfitInfo")
@@ -195,6 +197,64 @@ namespace NexusForever.Database.World
                     .HasColumnName("z")
                     .HasColumnType("float")
                     .HasDefaultValue(0);
+
+                entity.HasMany(e => e.EntityScript)
+                    .WithOne(es => es.Entity)
+                    .HasForeignKey(es => es.Id)
+                    .HasConstraintName("FK__entity_script_id__entity_id");
+
+                entity.HasMany(e => e.EntityProperty)
+                    .WithOne(ep => ep.Entity)
+                    .HasForeignKey(ep => ep.Id)
+                    .HasConstraintName("FK__entity_property_id__entity_id");
+            });
+
+            modelBuilder.Entity<EntityScriptModel>(entity =>
+            {
+                entity.ToTable("entity_script");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id)
+                    .HasColumnName("id")
+                    .HasColumnType("int(10) unsigned");
+                entity.Property(e => e.ScriptName)
+                    .IsRequired()
+                    .HasColumnName("scriptName")
+                    .HasColumnType("varchar(255)")
+                    .HasDefaultValue("");
+            });
+
+            modelBuilder.Entity<EntityPropertyModel>(entity =>
+            {
+                entity.ToTable("entity_property");
+                entity.HasKey(e => new { e.Id, e.Property })
+                    .HasName("PRIMARY");
+                entity.Property(e => e.Id)
+                    .HasColumnName("id")
+                    .HasColumnType("int(10) unsigned");
+                entity.Property(e => e.Property)
+                    .HasColumnName("property")
+                    .HasColumnType("int(10) unsigned");
+                entity.Property(e => e.Value)
+                    .HasColumnName("value")
+                    .HasColumnType("int(10) unsigned")
+                    .HasDefaultValue(0);
+            });
+
+            modelBuilder.Entity<CreatureInfoPropertyModel>(entity =>
+            {
+                entity.ToTable("creature_info_property");
+                entity.HasKey(e => new { e.Id, e.Property })
+                    .HasName("PRIMARY");
+                entity.Property(e => e.Id)
+                    .HasColumnName("id")
+                    .HasColumnType("int(10) unsigned");
+                entity.Property(e => e.Property)
+                    .HasColumnName("property")
+                    .HasColumnType("int(10) unsigned");
+                entity.Property(e => e.Value)
+                    .HasColumnName("value")
+                    .HasColumnType("int(10) unsigned")
+                    .HasDefaultValue(0);
             });
 
             modelBuilder.Entity<EntitySplineModel>(entity =>
@@ -203,8 +263,7 @@ namespace NexusForever.Database.World
 
                 entity.Property(e => e.Id)
                     .HasColumnName("id")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.Fx)
                     .HasColumnName("fx")
@@ -252,13 +311,11 @@ namespace NexusForever.Database.World
 
                 entity.Property(e => e.Id)
                     .HasColumnName("id")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.Stat)
                     .HasColumnName("stat")
-                    .HasColumnType("tinyint(3) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("tinyint(3) unsigned");
 
                 entity.Property(e => e.Value)
                     .HasColumnName("value")
@@ -277,8 +334,7 @@ namespace NexusForever.Database.World
 
                 entity.Property(e => e.Id)
                     .HasColumnName("id")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.BuyPriceMultiplier)
                     .HasColumnName("buyPriceMultiplier")
@@ -305,13 +361,11 @@ namespace NexusForever.Database.World
 
                 entity.Property(e => e.Id)
                     .HasColumnName("id")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.Index)
                     .HasColumnName("index")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.LocalisedTextId)
                     .HasColumnName("localisedTextId")
@@ -333,13 +387,11 @@ namespace NexusForever.Database.World
 
                 entity.Property(e => e.Id)
                     .HasColumnName("id")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.Index)
                     .HasColumnName("index")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.CategoryIndex)
                     .HasColumnName("categoryIndex")
@@ -418,8 +470,7 @@ namespace NexusForever.Database.World
 
                 entity.Property(e => e.Id)
                     .HasColumnName("id")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.Description)
                     .IsRequired()
@@ -455,8 +506,7 @@ namespace NexusForever.Database.World
 
                 entity.Property(e => e.Id)
                     .HasColumnName("id")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.Description)
                     .IsRequired()
@@ -498,13 +548,11 @@ namespace NexusForever.Database.World
 
                 entity.Property(e => e.Id)
                     .HasColumnName("id")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.CategoryId)
                     .HasColumnName("categoryId")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.Index)
                     .HasColumnName("index")
@@ -543,13 +591,11 @@ namespace NexusForever.Database.World
 
                 entity.Property(e => e.Id)
                     .HasColumnName("id")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.GroupId)
                     .HasColumnName("groupId")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.Description)
                     .IsRequired()
@@ -598,13 +644,11 @@ namespace NexusForever.Database.World
 
                 entity.Property(e => e.Id)
                     .HasColumnName("id")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.ItemId)
                     .HasColumnName("itemId")
-                    .HasColumnType("smallint(5) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("smallint(5) unsigned");
 
                 entity.Property(e => e.Amount)
                     .HasColumnName("amount")
@@ -632,13 +676,11 @@ namespace NexusForever.Database.World
 
                 entity.Property(e => e.Id)
                     .HasColumnName("id")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.CurrencyId)
                     .HasColumnName("currencyId")
-                    .HasColumnType("tinyint(3) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("tinyint(3) unsigned");
 
                 entity.Property(e => e.DiscountType)
                     .HasColumnName("discountType")
@@ -682,18 +724,15 @@ namespace NexusForever.Database.World
                 entity.Property(e => e.Id)
                     .HasColumnName("id")
                     .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0)
                     .HasComment("Tutorial ID");
 
                 entity.Property(e => e.Type)
                     .HasColumnName("type")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.TriggerId)
                     .HasColumnName("triggerId")
-                    .HasColumnType("int(10) unsigned")
-                    .HasDefaultValue(0);
+                    .HasColumnType("int(10) unsigned");
 
                 entity.Property(e => e.Note)
                     .IsRequired()

@@ -191,6 +191,9 @@
         BanAccountPlayer            = 119,
         BanAccountCharacter         = 120,
 
+        // game table
+        GameTable                   = 126,
+
         // non command permissions
         InstantLogout               = 10000,
         Signature                   = 10001,

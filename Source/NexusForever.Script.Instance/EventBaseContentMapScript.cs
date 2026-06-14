@@ -16,9 +16,9 @@ namespace NexusForever.Script.Instance
         /// <summary>
         /// Invoked when <see cref="IContentMapInstance"/> is loaded.
         /// </summary>
-        public void OnLoad(IContentMapInstance owner)
+        public void OnLoad(IContentMapInstance entityOwner)
         {
-            map         = owner;
+            map         = entityOwner;
             publicEvent = map.PublicEventManager.CreateEvent(PublicEventId);
         }
 

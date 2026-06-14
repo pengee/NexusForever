@@ -124,23 +124,22 @@ namespace NexusForever.Script
 
                     log.LogTrace("Added script type {TypeName} to script assembly {Name}.", type.Name, Name);
                 }
+
+                if (AssemblyPath != null)
+                {
+                    assemblyWatcher.OnEvent += () => RaiseEvent(ReloadType.Assembly);
+                    assemblyWatcher.Start();
+                }
+
+                if (SourcePath != null)
+                {
+                    sourceWatcher.OnEvent += () => RaiseEvent(ReloadType.Source);
+                    sourceWatcher.Start();
+                }
             }
             catch (Exception ex)
             {
                 log.LogError(ex, "An exception occured during loading of script assembly {Name}!", Name);
-            }
-
-
-            if (AssemblyPath != null)
-            {
-                assemblyWatcher.OnEvent += () => RaiseEvent(ReloadType.Assembly);
-                assemblyWatcher.Start();
-            }
-
-            if (SourcePath != null)
-            {
-                sourceWatcher.OnEvent += () => RaiseEvent(ReloadType.Source);
-                sourceWatcher.Start();
             }
         }
 
@@ -170,7 +169,10 @@ namespace NexusForever.Script
         public WeakReference Unload()
         {
             if (context == null)
-                throw new InvalidOperationException();
+            {
+                log.LogWarning("Script assembly {Name} has no loaded context, skipping unload.", Name);
+                return new WeakReference(null);
+            }
 
             log.LogInformation("Starting unload for script assembly {Name}.", Name);
 

@@ -8,7 +8,7 @@
         /// <remarks>
         /// This will be invoked after <see cref="IScript.OnLoad"/>.
         /// </remarks>
-        void OnLoad(T owner)
+        void OnLoad(T entityOwner)
         {
         }
     }

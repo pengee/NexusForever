@@ -11,6 +11,7 @@
         TargetInterruptArmorBlocked  = 6,
         StackingDoesNotStack         = 7,
         StackingShorterDuration      = 8,
-        DiminishingReturnsTriggerCap = 9
+        DiminishingReturnsTriggerCap = 9,
+        CCStateInvalidDuration       = 10
     };
 }

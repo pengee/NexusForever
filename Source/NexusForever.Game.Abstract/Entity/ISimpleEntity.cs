@@ -2,6 +2,6 @@
 {
     public interface ISimpleEntity : IUnitEntity
     {
-        byte QuestChecklistIdx { get; }
+        new byte QuestChecklistIdx { get; }
     }
 }

@@ -11,6 +11,7 @@ namespace NexusForever.Script
     {
         public string Name { get; private set; }
         public Type Type { get; private set; }
+        public bool IsDefault => parameters.IsDefault;
 
         private readonly Dictionary<uint, IScriptInstanceInfo> instances = new();
 

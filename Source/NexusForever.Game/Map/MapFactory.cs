@@ -2,6 +2,7 @@
 using NexusForever.Game.Abstract.Map.Instance;
 using NexusForever.Game.Map.Instance;
 using NexusForever.Game.Static.Map;
+using NexusForever.GameTable.Model;
 using NexusForever.Shared;
 
 namespace NexusForever.Game.Map
@@ -20,9 +21,12 @@ namespace NexusForever.Game.Map
 
         #endregion
 
-        public IMap CreateMap(MapType mapType)
+        public IMap CreateMap(WorldEntry entry)
         {
-            switch (mapType)
+            if (entry.Id == 3460)
+                return factory.Resolve<TutorialInstancedMap>();
+
+            switch (entry.Type)
             {
                 case MapType.MiniDungeon:
                 case MapType.Adventure:

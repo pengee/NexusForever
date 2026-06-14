@@ -6,16 +6,18 @@ namespace NexusForever.Network
     {
         public bool Flatline => timeToFlatline <= 0d;
 
+        private readonly double sessionTimeout;
         private double timeToFlatline;
 
-        public SocketHeartbeat()
+        public SocketHeartbeat(double sessionTimeout)
         {
+            this.sessionTimeout = sessionTimeout;
             OnHeartbeat();
         }
 
         public void OnHeartbeat()
         {
-            timeToFlatline = 300d;
+            timeToFlatline = sessionTimeout;
         }
 
         public void Update(double lastTick)

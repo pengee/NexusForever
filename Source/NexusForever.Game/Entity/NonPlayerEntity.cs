@@ -6,6 +6,8 @@ using NexusForever.GameTable;
 using NexusForever.GameTable.Model;
 using NexusForever.Network.World.Entity;
 using NexusForever.Network.World.Entity.Model;
+using NexusForever.Script.Template;
+using NexusForever.Shared.Game;
 
 namespace NexusForever.Game.Entity
 {
@@ -15,11 +17,13 @@ namespace NexusForever.Game.Entity
 
         public IVendorInfo VendorInfo { get; private set; }
 
+        private readonly UpdateTimer respawnTimer = new(30d, false);
+
         #region Dependency Injection
 
-        public NonPlayerEntity(IMovementManager movementManager)
-            : base(movementManager)
+        public NonPlayerEntity(IMovementManager movementManager) : base(movementManager)
         {
+            LeashRange = 40f;
         }
 
         #endregion
@@ -28,11 +32,43 @@ namespace NexusForever.Game.Entity
         {
             base.Initialise(model);
 
-            if (model.EntityVendor != null)
-            {
-                CreateFlags |= EntityCreateFlag.HasInteractionPrereq;
-                VendorInfo = new VendorInfo(model);
-            }
+            QuestChecklistIdx = model.QuestChecklistIdx;
+
+            if (model.EntityVendor == null) { return; }
+            
+            CreateFlags |= EntityCreateFlag.HasInteractionPrereq;
+            VendorInfo = new VendorInfo(model);
+        }
+
+        public override void Update(double lastTick)
+        {
+            base.Update(lastTick);
+
+            if (IsAlive) { return; }
+            respawnTimer.Update(lastTick);
+            
+            if (!respawnTimer.HasElapsed) { return; }
+            Respawn();
+        }
+
+        protected override void OnDeath()
+        {
+            base.OnDeath();
+            respawnTimer.Reset();
+        }
+
+        private void Respawn()
+        {
+            Health = MaxHealth;
+            DeathState = null;
+            MovementManager.SetPosition(LeashPosition, false);
+            Relocate(LeashPosition);
+            MovementManager.SetStateDefault();
+            MovementManager.SetMoveDefaults(false);
+
+            // Notify scripts so they can perform a defensive reset in case OnDeath was
+            // bypassed (e.g. AI was disabled at the time of death).
+            scriptCollection?.Invoke<IUnitScript>(s => s.OnRespawn());
         }
 
         protected override IEntityModel BuildEntityModel()
@@ -40,7 +76,7 @@ namespace NexusForever.Game.Entity
             return new NonPlayerEntityModel
             {
                 CreatureId = CreatureId,
-                QuestChecklistIdx = 0
+                QuestChecklistIdx = QuestChecklistIdx
             };
         }
 
@@ -55,6 +91,8 @@ namespace NexusForever.Game.Entity
             float value = base.CalculateDefaultProperty(property);
 
             Creature2Entry creatureEntry = GameTableManager.Instance.Creature2.GetEntry(CreatureId);
+            if (creatureEntry == null)
+                return value;
 
             Creature2ArcheTypeEntry archeTypeEntry = GameTableManager.Instance.Creature2ArcheType.GetEntry(creatureEntry.Creature2ArcheTypeId);
             if (archeTypeEntry != null)

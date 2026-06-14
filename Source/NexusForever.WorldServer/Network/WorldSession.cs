@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
+using Microsoft.Extensions.Options;
 using NexusForever.Cryptography;
 using NexusForever.Database.Auth.Model;
 using NexusForever.Database.Character.Model;
@@ -8,7 +9,9 @@ using NexusForever.Game;
 using NexusForever.Game.Abstract.Account;
 using NexusForever.Game.Abstract.Entity;
 using NexusForever.Game.Account;
+using NexusForever.Game.Configuration.Model;
 using NexusForever.Game.Static.Entity;
+using NexusForever.Network.Configuration.Model;
 using NexusForever.Network.Message;
 using NexusForever.Network.Message.Model;
 using NexusForever.Network.Session;
@@ -34,15 +37,19 @@ namespace NexusForever.WorldServer.Network
 
         #region Dependency Injection
 
+        private readonly IOptions<RealmConfig> realmConfig;
         private readonly INetworkManager<IWorldSession> networkManager;
         private readonly ILoginQueueManager loginQueueManager;
 
         public WorldSession(
             IMessageManager messageManager,
+            IOptions<RealmConfig> realmConfig,
+            IOptions<NetworkConfig> networkConfig,
             INetworkManager<IWorldSession> networkManager,
             ILoginQueueManager loginQueueManager)
-            : base(messageManager)
+            : base(messageManager, networkConfig.Value.SessionTimeout)
         {
+            this.realmConfig         = realmConfig;
             this.networkManager    = networkManager;
             this.loginQueueManager = loginQueueManager;
         }

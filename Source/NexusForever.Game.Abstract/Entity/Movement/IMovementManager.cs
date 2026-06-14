@@ -305,5 +305,10 @@ namespace NexusForever.Game.Abstract.Entity.Movement
         /// Launch a new follow spline, following the supplied <see cref="IWorldEntity"/> at distance.
         /// </summary>
         void Follow(IWorldEntity entity, float distance);
+
+        /// <summary>
+        /// Move to the supplied position at the given speed.
+        /// </summary>
+        void MoveToPosition(Vector3 target, float speed);
     }
 }

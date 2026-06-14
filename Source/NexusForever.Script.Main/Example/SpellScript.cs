@@ -12,9 +12,9 @@ namespace NexusForever.Script.Main.Example
         /// <summary>
         /// Invoked when <see cref="IScript"/> is loaded.
         /// </summary>
-        public void OnLoad(ISpell owner)
+        public void OnLoad(ISpell entityOwner)
         {
-            this.owner = owner;
+            this.owner = entityOwner;
         }
     }
 }

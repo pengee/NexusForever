@@ -1,9 +1,12 @@
 ﻿using System.Collections.Immutable;
 using System.Diagnostics;
+using NexusForever.Game.Abstract.Entity;
 using NexusForever.Game.Abstract.Quest;
+using NexusForever.Game.Entity;
 using NexusForever.Game.Static.Quest;
 using NexusForever.GameTable;
 using NexusForever.GameTable.Model;
+using NexusForever.Network.World.Message.Model;
 using NexusForever.Shared;
 using NLog;
 
@@ -30,6 +33,9 @@ namespace NexusForever.Game.Quest
         private ImmutableDictionary<uint, ICommunicatorMessage> communicatorStore;
         private ImmutableDictionary<ushort, ImmutableList<ICommunicatorMessage>> communicatorQuestStore;
         private ImmutableDictionary<(ushort /*questId*/, QuestState), ImmutableList<ICommunicatorMessage>> communicatorQuestStateTriggerStore;
+
+        private bool dailyResetFired;
+        private bool weeklyResetFired;
 
         public void Initialise()
         {
@@ -155,10 +161,38 @@ namespace NexusForever.Game.Quest
         {
             DateTime now = DateTime.UtcNow;
             if (NextDailyReset <= now)
+            {
                 NextDailyReset = NextDailyReset.AddDays(1);
+                dailyResetFired = true;
+            }
 
             if (NextWeeklyReset <= now)
+            {
                 NextWeeklyReset = NextWeeklyReset.AddDays(7);
+                weeklyResetFired = true;
+            }
+
+            if (dailyResetFired || weeklyResetFired)
+                BroadcastPeriodicReset();
+        }
+
+        private void BroadcastPeriodicReset()
+        {
+            var flags = dailyResetFired && weeklyResetFired
+                ? QuestRepeatPeriodFlags.Daily | QuestRepeatPeriodFlags.Weekly
+                : dailyResetFired
+                    ? QuestRepeatPeriodFlags.Daily
+                    : QuestRepeatPeriodFlags.Weekly;
+
+            foreach (IPlayer player in PlayerManager.Instance)
+                player.Session.EnqueueMessageEncrypted(new ServerQuestPeriodicReset
+                {
+                    DailyRandomSeed = (ulong)DateTime.UtcNow.Ticks,
+                    ResetFlags = flags
+                });
+
+            dailyResetFired = false;
+            weeklyResetFired = false;
         }
 
         /// <summary>

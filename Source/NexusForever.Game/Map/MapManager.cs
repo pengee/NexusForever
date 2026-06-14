@@ -30,6 +30,8 @@ namespace NexusForever.Game.Map
         // reset instance limit counts every hour
         private readonly UpdateTimer instanceCountReset = new(TimeSpan.FromMinutes(60));
 
+        public IEnumerable<IMap> LoadedMaps => maps.Values;
+
 
         #region Dependency Injection
 
@@ -149,7 +151,7 @@ namespace NexusForever.Game.Map
             if (maps.TryGetValue(entry.Id, out IMap map))
                 return map;
 
-            map = mapFactory.CreateMap(entry.Type);
+            map = mapFactory.CreateMap(entry);
             map.Initialise(entry);
             maps.Add(entry.Id, map);
 

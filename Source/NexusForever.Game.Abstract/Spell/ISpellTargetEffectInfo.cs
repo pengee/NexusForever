@@ -1,4 +1,5 @@
-﻿using NexusForever.GameTable.Model;
+﻿using NexusForever.Game.Static.Spell;
+using NexusForever.GameTable.Model;
 using NexusForever.Network.World.Combat;
 
 namespace NexusForever.Game.Abstract.Spell
@@ -12,6 +13,7 @@ namespace NexusForever.Game.Abstract.Spell
         List<ICombatLog> CombatLogs { get; }
 
         void AddDamage(IDamageDescription damage);
+        void AddDamage(DamageType damageType, uint damage);
         void AddCombatLog(ICombatLog combatLog);
     }
 }

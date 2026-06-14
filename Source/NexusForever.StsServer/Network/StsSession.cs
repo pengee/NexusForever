@@ -4,8 +4,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Xml;
+using Microsoft.Extensions.Options;
 using NexusForever.Cryptography;
 using NexusForever.Database.Auth.Model;
+using NexusForever.Network.Configuration.Model;
 using NexusForever.Network.Session;
 using NexusForever.Network.Sts;
 using NexusForever.Network.Sts.Model;
@@ -35,11 +37,15 @@ namespace NexusForever.StsServer.Network
         #region Dependency Injection
 
         private readonly IMessageManager messageManager;
+        private readonly double sessionTimeout;
 
         public StsSession(
-            IMessageManager messageManager)
+            IMessageManager messageManager,
+            IOptions<NetworkConfig> networkConfig)
+            : base(networkConfig.Value.SessionTimeout)
         {
-            this.messageManager = messageManager;
+            this.messageManager  = messageManager;
+            this.sessionTimeout = networkConfig.Value.SessionTimeout;
         }
 
         #endregion

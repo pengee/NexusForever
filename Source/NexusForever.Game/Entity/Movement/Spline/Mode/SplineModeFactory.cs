@@ -28,6 +28,11 @@ namespace NexusForever.Game.Entity.Movement.Spline.Mode
                 SplineMode.OneShotReverse      => serviceProvider.GetRequiredService<SplineModeOneShotReverse>(),
                 SplineMode.BackAndForthReverse => serviceProvider.GetRequiredService<SplineModeBackAndForthReverse>(),
                 SplineMode.CyclicReverse       => serviceProvider.GetRequiredService<SplineModeCyclicReverse>(),
+                SplineMode.SplineMode6         => serviceProvider.GetRequiredService<SplineModeCyclic>(),
+                SplineMode.SplineMode7         => serviceProvider.GetRequiredService<SplineModeBackAndForth>(),
+                SplineMode.SplineMode8         => serviceProvider.GetRequiredService<SplineModeCyclic>(),
+                SplineMode.SplineMode9         => serviceProvider.GetRequiredService<SplineModeOneShot>(),
+                SplineMode.SplineMode10        => serviceProvider.GetRequiredService<SplineModeBackAndForth>(),
                 _                              => throw new NotImplementedException()
             };
         }

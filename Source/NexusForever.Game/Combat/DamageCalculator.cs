@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using NexusForever.Game.Abstract;
+using NexusForever.Game.Abstract.Combat;
 using NexusForever.Game.Abstract.Entity;
 using NexusForever.Game.Abstract.Spell;
 using NexusForever.Game.Spell;
@@ -50,7 +51,8 @@ namespace NexusForever.Game.Combat
                 CombatResult = CombatResult.Hit
             };
 
-            if (CalculateDeflect(attacker, victim))
+            bool deflected   = CalculateDeflect(attacker, victim, out float armorPiercePct);
+            if (deflected)
             {
                 info.DropEffect = true;
                 info.AddCombatLog(new CombatLogDeflect
@@ -58,6 +60,8 @@ namespace NexusForever.Game.Combat
                         BMultiHit = false,
                         CastData  = castData
                     });
+
+                victim.ProcManager?.EvaluateProc(ProcTriggerType.OnDeflect, attacker);
                 return;
             }
 
@@ -67,9 +71,7 @@ namespace NexusForever.Game.Combat
 
             damage = CalculateBaseDamageVariance(damage);
 
-            damage = GetDamageAfterArmorMitigation(victim, info.Entry.DamageType, damage);
-
-            // TODO: Add in other attacking modifiers like Armor Pierce, Strikethrough, Multi-Hit, etc.
+            damage = GetDamageAfterArmorMitigation(victim, info.Entry.DamageType, damage, armorPiercePct);
 
             if (CalculateCrit(ref damage, attacker, victim))
                 damageDescription.CombatResult = CombatResult.Critical;
@@ -78,20 +80,52 @@ namespace NexusForever.Game.Combat
             if (CalculateGlance(ref damage, attacker, victim))
             {
                 uint glanceDamage = preGlanceDamage - damage;
-                // TODO: Add CombatLog
+                info.AddCombatLog(new CombatLogDeflect
+                    {
+                        BMultiHit = false,
+                        CastData  = castData
+                    });
             }
 
             uint shieldedAmount = CalculateShieldAmount(damage, victim);
             damage -= shieldedAmount;
             damageDescription.ShieldAbsorbAmount = shieldedAmount;
 
-            // TODO: Add in other defensive modifiers
+            uint absorptionAbsorbed = Math.Min(victim.Absorption, damage);
+            damage -= absorptionAbsorbed;
+            damageDescription.AbsorbedAmount = absorptionAbsorbed;
 
             damageDescription.AdjustedDamage = damage;
 
+            info.AddCombatLog(new CombatLogDamage
+            {
+                MitigatedDamage = damage,
+                RawDamage       = damageDescription.RawDamage,
+                Shield          = damageDescription.ShieldAbsorbAmount,
+                Absorption      = damageDescription.AbsorbedAmount,
+                Overkill        = 0u,
+                Glance          = 0u,
+                BTargetVulnerable = false,
+                BKilled         = false,
+                BPeriodic       = false,
+                DamageType      = info.Entry.DamageType,
+                EffectType      = info.Entry.EffectType,
+                CastData        = castData
+            });
+
+            if (damageDescription.CombatResult == CombatResult.Hit)
+                CalculateMultiHit(attacker, victim, spell, info, ref damage, castData);
+
             info.AddDamage(damageDescription);
 
-            // TODO: Queue Proc Events*/
+            attacker.ProcManager?.EvaluateProc(ProcTriggerType.OnDamageDealt, victim);
+            victim.ProcManager?.EvaluateProc(ProcTriggerType.OnDamageTaken, attacker);
+
+            if (damageDescription.CombatResult == CombatResult.Critical)
+            {
+                attacker.ProcManager?.EvaluateProc(ProcTriggerType.OnCritDealt, victim);
+                victim.ProcManager?.EvaluateProc(ProcTriggerType.OnCritReceived, attacker);
+            }
         }
 
         /// <summary>
@@ -251,14 +285,15 @@ namespace NexusForever.Game.Combat
             return (uint)(damage * (Random.Shared.Next(95, 103) / 100f));
         }
 
-        private uint GetDamageAfterArmorMitigation(IUnitEntity victim, DamageType damageType, uint damage)
+        private uint GetDamageAfterArmorMitigation(IUnitEntity victim, DamageType damageType, uint damage, float armorPiercePct = 0f)
         {
             GameFormulaEntry armorFormulaEntry = gameTableManager.GameFormula.GetEntry(1234);
             float maximumArmorMitigation = (float)(armorFormulaEntry.Dataint01 * 0.01);
-            float mitigationPct = (armorFormulaEntry.Datafloat0 / victim.Level * armorFormulaEntry.Datafloat01) * victim.GetPropertyValue(Property.Armor) / 100;
+            float victimArmor = victim.GetPropertyValue(Property.Armor) * (1f - armorPiercePct);
+            float mitigationPct = (armorFormulaEntry.Datafloat0 / victim.Level * armorFormulaEntry.Datafloat01) * victimArmor / 100;
 
             if (damageType == DamageType.Physical)
-                mitigationPct += victim.GetPropertyValue(Property.DamageMitigationPctOffsetMagic);
+                mitigationPct += victim.GetPropertyValue(Property.DamageMitigationPctOffsetPhysical);
             else if (damageType == DamageType.Tech)
                 mitigationPct += victim.GetPropertyValue(Property.DamageMitigationPctOffsetTech);
             else if (damageType == DamageType.Magic)
@@ -272,7 +307,7 @@ namespace NexusForever.Game.Combat
 
         private bool IsSuccessfulChance(float percentage)
         {
-            return new Random().Next(1, 10000) <= percentage * 10000f;
+            return Random.Shared.Next(1, 10000) <= percentage * 10000f;
         }
 
         /// <summary>
@@ -287,31 +322,80 @@ namespace NexusForever.Game.Combat
         }
 
         /// <summary>
-        /// Returns whether this attack was deflected.
+        /// Returns a flat damage reduction ratio (0-1) from the target's resist rating for the given damage type.
+        /// Uses CC Resilience as the resist chance; on success, a flat portion of ResistPhysical / ResistTech /
+        /// ResistMagic (depending on damageType) is applied, producing a 0-1 reduction scale.
         /// </summary>
-        /// <remarks>Calculates chance to deflect an attack, avoiding all damage from that attack.</remarks>
-        private bool CalculateDeflect(IUnitEntity attacker, IUnitEntity victim)
+        private float CalculateResist(IUnitEntity victim, DamageType damageType)
         {
-            // TODO: Add in Strikethrough Calculations (and that increases Armor Pierce)
+            float resistChance = GetRatingPercentMod(Property.RatingCCResilience, victim);
+            if (resistChance <= 0f || !IsSuccessfulChance(resistChance))
+                return 0f;
 
-            float deflectChance = GetRatingPercentMod(Property.RatingAvoidIncrease, victim);
-            return IsSuccessfulChance(deflectChance);
+            float resistValue = damageType switch
+            {
+                DamageType.Physical => victim.GetPropertyValue(Property.ResistPhysical),
+                DamageType.Tech     => victim.GetPropertyValue(Property.ResistTech),
+                DamageType.Magic    => victim.GetPropertyValue(Property.ResistMagic),
+                _                   => 0f,
+            };
+
+            return Math.Clamp(resistValue / 100f, 0f, 1f);
+        }
+
+        /// <summary>
+        /// Calculates strikethrough and returns whether the attack was deflected.
+        /// </summary>
+        /// <remarks>
+        /// Strikethrough reduces the target's block chance using the formula
+        /// adjustedBlockChance = blockChance * blockConstant / (strikethrough + blockConstant).
+        /// Any excess strikethrough above the adjusted block chance is converted to an armor pierce bonus.
+        /// </remarks>
+        private bool CalculateDeflect(IUnitEntity attacker, IUnitEntity victim, out float armorPiercePct)
+        {
+            GameFormulaEntry blockFormulaEntry = gameTableManager.GameFormula.GetEntry(1230);
+            float blockConstant = blockFormulaEntry == null ? 100f : blockFormulaEntry.Datafloat01 / attacker.Level;
+
+            float strikethroughPct  = attacker.GetPropertyValue(Property.RatingAvoidReduce);
+            float blockChance       = GetRatingPercentMod(Property.RatingAvoidIncrease, victim);
+
+            float adjustedBlockChance = blockChance * blockConstant / (strikethroughPct + blockConstant);
+            bool deflected = IsSuccessfulChance(adjustedBlockChance);
+
+            float excessDeflect   = Math.Max(0f, adjustedBlockChance - blockChance);
+            armorPiercePct = excessDeflect / blockConstant;
+
+            return deflected;
         }
 
         /// <summary>
         /// Returns whether this attack crit, and if so, modifies the referenced damage value appropriately.
         /// </summary>
+        /// <remarks>
+        /// Also handles Crit Deflect — if the target successfully crit-deflects, the crit damage is reduced
+        /// by the target's critical mitigation percentage while still being treated as a crit for proc purposes.
+        /// </remarks>
         private bool CalculateCrit(ref uint damage, IUnitEntity attacker, IUnitEntity victim)
         {
-            // TODO: Add in Crit Deflect and Critical Mitigation calculations
-
             float critRate = GetRatingPercentMod(Property.RatingCritChanceIncrease, attacker);
             if (critRate <= 0f)
                 return false;
 
             bool crit = IsSuccessfulChance(critRate);
             if (crit)
-                damage = (uint)Math.Round(damage * GetRatingPercentMod(Property.RatingCritSeverityIncrease, attacker));
+            {
+                float critSeverity = GetRatingPercentMod(Property.RatingCritSeverityIncrease, attacker);
+                damage = (uint)Math.Round(damage * critSeverity);
+
+                // Crit Deflect: target can reduce incoming crit damage
+                float critDeflectChance = GetRatingPercentMod(Property.RatingCritDeflectIncrease, victim);
+                bool critDeflected = IsSuccessfulChance(critDeflectChance);
+                if (critDeflected)
+                {
+                    float critMitigationPct = GetRatingPercentMod(Property.RatingCritMitigationIncrease, victim);
+                    damage = (uint)Math.Round(damage * (1f - critMitigationPct));
+                }
+            }
 
             return crit;
         }
@@ -330,6 +414,54 @@ namespace NexusForever.Game.Combat
                 damage = (uint)Math.Round((float)(damage * (1 - GetRatingPercentMod(Property.RatingGlanceAmount, victim))));
 
             return glance;
+        }
+
+        /// <summary>
+        /// Multi-Hit adds a second hit after the first when the attack result is a regular Hit (not Crit or Glance).
+        /// The multi-hit strike does ~33% of the primary damage. Multi-Hit is only rolled against the victim's
+        /// multi-hit chance chance.
+        /// </summary>
+        private void CalculateMultiHit(IUnitEntity attacker, IUnitEntity victim, ISpell spell, ISpellTargetEffectInfo info, ref uint damage, CombatLogCastData castData)
+        {
+            float multiHitChance = GetRatingPercentMod(Property.RatingMultiHitChance, attacker);
+            if (multiHitChance <= 0f || !IsSuccessfulChance(multiHitChance))
+                return;
+
+            uint multiHitDamage = (uint)Math.Round(damage * 0.33f);
+
+            info.AddCombatLog(new CombatLogDamage
+            {
+                MitigatedDamage   = multiHitDamage,
+                RawDamage         = damage,
+                Shield            = 0u,
+                Absorption        = 0u,
+                Overkill          = 0u,
+                Glance            = 0u,
+                BTargetVulnerable = false,
+                BKilled           = false,
+                BPeriodic         = false,
+                DamageType        = info.Entry.DamageType,
+                EffectType        = info.Entry.EffectType,
+                CastData          = castData,
+            });
+
+            info.AddCombatLog(new CombatLogMultiHit
+            {
+                DamageAmount      = multiHitDamage,
+                RawDamage         = damage,
+                Shield            = 0u,
+                Absorption        = 0u,
+                Overkill          = 0u,
+                GlanceAmount      = 0u,
+                BTargetVulnerable = false,
+                BKilled           = false,
+                BPeriodic         = false,
+                DamageType        = info.Entry.DamageType,
+                EffectType        = info.Entry.EffectType,
+                CastData          = castData,
+            });
+
+            damage += multiHitDamage;
         }
 
         private float GetRatingPercentMod(Property property, IUnitEntity entity)
@@ -366,6 +498,12 @@ namespace NexusForever.Game.Combat
                     break;
                 case Property.RatingCritSeverityIncrease:
                     gameFormula = gameTableManager.GameFormula.GetEntry(1232);
+                    break;
+                case Property.RatingCritDeflectIncrease:
+                    gameFormula = gameTableManager.GameFormula.GetEntry(1276);
+                    break;
+                case Property.RatingCritMitigationIncrease:
+                    gameFormula = gameTableManager.GameFormula.GetEntry(1277);
                     break;
                 case Property.CCDurationModifier:
                     gameFormula = gameTableManager.GameFormula.GetEntry(1274);
@@ -450,9 +588,12 @@ namespace NexusForever.Game.Combat
                     baseValue = entity.GetPropertyValue(Property.BaseCritChance);
                     break;
                 case Property.RatingCritSeverityIncrease:
-                    // TODO: Confirm Property below
-                    // baseValue = entity.GetPropertyValue(Property.CriticalHitSeverityMultiplier);
+                    baseValue = entity.GetPropertyValue(Property.CriticalHitSeverityMultiplier);
                     break;
+                case Property.RatingCritDeflectIncrease:
+                    baseValue = 0f;
+                    break;
+                case Property.RatingCritMitigationIncrease:
                 case Property.RatingDamageReflectAmount:
                 case Property.BaseDamageReflectAmount:
                     baseValue = entity.GetPropertyValue(Property.BaseDamageReflectAmount);

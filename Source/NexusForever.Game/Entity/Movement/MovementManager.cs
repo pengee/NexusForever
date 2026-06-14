@@ -770,5 +770,31 @@ namespace NexusForever.Game.Entity.Movement
             List<Vector3> nodes = generator.CalculatePath();
             SetPositionPath(nodes, SplineType.Linear, SplineMode.OneShot, 8f);
         }
+
+        /// <summary>
+        /// Move to the supplied position at the given speed.
+        /// </summary>
+        public void MoveToPosition(Vector3 target, float speed)
+        {
+            if (!ServerControl) { return; }
+
+            Vector3 current = positionCommandGroup.GetPosition();
+            if (Vector3.DistanceSquared(current, target) < 0.0001f)
+                return;
+            
+            SetState(StateFlags.Move);
+            SetMoveDefaults(false);
+            SetRotationFacePosition(target);
+
+            var generator = new DirectMovementGenerator
+            {
+                Begin = current,
+                Final = target,
+                Map   = Owner.Map
+            };
+
+            List<Vector3> nodes = generator.CalculatePath();
+            SetPositionPath(nodes, SplineType.Linear, SplineMode.OneShot, speed);
+        }
     }
 }

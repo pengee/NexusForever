@@ -14,6 +14,7 @@ namespace NexusForever.Game.Map.Lock
             sc.AddSingleton<IFactoryInterface<IMapLock>, FactoryInterface<IMapLock>>();
             sc.AddTransient<IMapLock, MapLock>();
             sc.AddTransient<IResidenceMapLock, ResidenceMapLock>();
+            sc.AddTransient<ITutorialMapLock, TutorialMapLock>();
         }
     }
 }

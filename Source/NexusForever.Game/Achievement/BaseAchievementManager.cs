@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using NLog;
 using NexusForever.Database;
 using NexusForever.Database.Character;
 using NexusForever.Database.Character.Model;
@@ -14,6 +15,8 @@ namespace NexusForever.Game.Achievement
 {
     public abstract class BaseAchievementManager<T> : IBaseAchievementManager<T> where T : class, IAchievementModel, new()
     {
+        private static readonly ILogger log = LogManager.GetCurrentClassLogger();
+
         public uint AchievementPoints { get; protected set; }
 
         protected abstract ulong OwnerId { get; }
@@ -178,11 +181,19 @@ namespace NexusForever.Game.Achievement
         private bool CanUpdateAchievement(IPlayer player, AchievementEntry entry, uint objectId, uint objectIdAlt)
         {
             // TODO: should the server also check PrerequisiteId?
-            if (entry.PrerequisiteIdServer != 0u && !PrerequisiteManager.Instance.Meets(player, entry.PrerequisiteIdServer))
-                return false;
-            
-            if (entry.PrerequisiteId != 0u && !PrerequisiteManager.Instance.Meets(player, entry.PrerequisiteId))
-                return false;
+            if (entry.PrerequisiteIdServer != 0u)
+            {
+                log.Trace($"CanUpdateAchievement: achievement {entry.Id} PrerequisiteIdServer={entry.PrerequisiteIdServer} for player {player.Name}");
+                if (!PrerequisiteManager.Instance.Meets(player, entry.PrerequisiteIdServer))
+                    return false;
+            }
+
+            if (entry.PrerequisiteId != 0u)
+            {
+                log.Trace($"CanUpdateAchievement: achievement {entry.Id} PrerequisiteId={entry.PrerequisiteId} for player {player.Name}");
+                if (!PrerequisiteManager.Instance.Meets(player, entry.PrerequisiteId))
+                    return false;
+            }
 
             // TODO: research PrerequisiteIdObjective and PrerequisiteIdObjectiveAlt
 

@@ -2,6 +2,8 @@
 using NexusForever.Game.Abstract.Combat;
 using NexusForever.Game.Abstract.Entity;
 using NexusForever.Game.Abstract.Entity.Movement;
+using NexusForever.GameTable;
+using NexusForever.GameTable.Model;
 using NexusForever.Network.World.Message.Model;
 using NexusForever.Script;
 
@@ -12,6 +14,9 @@ namespace NexusForever.Game.Entity
     /// </summary>
     public abstract class CreatureEntity : UnitEntity, ICreatureEntity
     {
+        public IEnumerable<ICreatureSpellEntry> CreatureSpells => creatureSpells;
+        private readonly List<ICreatureSpellEntry> creatureSpells = new();
+
         #region Dependency Injection
 
         public CreatureEntity(IMovementManager movementManager)
@@ -25,7 +30,40 @@ namespace NexusForever.Game.Entity
         {
             base.Initialise(model);
 
+            LoadCreatureSpells();
+
             scriptCollection = ScriptManager.Instance.InitialiseEntityScripts<ICreatureEntity>(this);
+        }
+
+        private void LoadCreatureSpells()
+        {
+            if (CreatureEntry == null)
+                return;
+
+            uint[] spellIds =
+            {
+                CreatureEntry.Spell4IdActivate00,
+                CreatureEntry.Spell4IdActivate01,
+                CreatureEntry.Spell4IdActivate02,
+                CreatureEntry.Spell4IdActivate03
+            };
+
+            foreach (uint spell4Id in spellIds)
+            {
+                if (spell4Id == 0u)
+                    continue;
+
+                Spell4Entry spell4Entry = GameTableManager.Instance.Spell4.GetEntry(spell4Id);
+                if (spell4Entry == null)
+                    continue;
+
+                creatureSpells.Add(new CreatureSpellEntry(
+                    spell4Id,
+                    spell4Entry.Spell4BaseIdBaseSpell,
+                    CreatureEntry.ActivateSpellMinRange,
+                    CreatureEntry.ActivateSpellMaxRange
+                ));
+            }
         }
 
         /// <summary>

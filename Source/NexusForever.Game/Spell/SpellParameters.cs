@@ -10,8 +10,11 @@ namespace NexusForever.Game.Spell
         public ISpellInfo ParentSpellInfo { get; set; }
         public ISpellInfo RootSpellInfo { get; set; }
         public bool UserInitiatedSpellCast { get; set; }
-        public uint PrimaryTargetId { get; set; }
-        public Position Position { get; set; }
+        public byte TargetType { get; set; } // this should be configured by the spell
+        public uint? PrimaryTargetId { get; set; }
+        public uint? AttachedUnitId { get; set; }
+        public Position[] TelegraphPositions { get; set; }
+        public float? Yaw { get; set; }
         public ushort TaxiNode { get; set; }
     }
 }

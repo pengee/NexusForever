@@ -217,5 +217,62 @@ namespace NexusForever.Database.Character
                 
             return context.PropertyBase.Where(p => p.Type == type).ToList();
         }
+
+        /// <summary>
+        /// List characters with optional filters and pagination.
+        /// </summary>
+        public (List<CharacterModel> Characters, int Total) GetCharacters(string? nameFilter = null, uint? accountId = null, bool? isOnline = null, int offset = 0, int limit = 50)
+        {
+            using var context = new CharacterContext(config);
+
+            IQueryable<CharacterModel> query = context.Character.AsNoTracking().Where(c => c.DeleteTime == null);
+
+            if (!string.IsNullOrEmpty(nameFilter))
+                query = query.Where(c => c.Name.Contains(nameFilter));
+            if (accountId.HasValue)
+                query = query.Where(c => c.AccountId == accountId.Value);
+            if (isOnline.HasValue)
+                query = query.Where(c => c.IsOnline == isOnline.Value);
+
+            int total = query.Count();
+            var characters = query
+                .OrderByDescending(c => c.LastOnline ?? DateTime.MinValue)
+                .Skip(offset).Take(limit)
+                .ToList();
+
+            return (characters, total);
+        }
+
+        /// <summary>
+        /// Get character with full includes for admin detail view.
+        /// </summary>
+        public async Task<CharacterModel?> GetCharacterDetailAsync(ulong id)
+        {
+            await using var context = new CharacterContext(config);
+            return await context.Character.AsNoTracking()
+                .Include(c => c.Item)
+                .Include(c => c.Quest).ThenInclude(q => q.QuestObjective)
+                .Include(c => c.Spell)
+                .Include(c => c.Stat)
+                .FirstOrDefaultAsync(c => c.Id == id);
+        }
+
+        /// <summary>
+        /// Set character level directly in database (for offline characters).
+        /// </summary>
+        public bool SetCharacterLevel(ulong characterId, byte level)
+        {
+            using var context = new CharacterContext(config);
+            var character = context.Character.FirstOrDefault(c => c.Id == characterId);
+            if (character == null)
+                return false;
+
+            if (level < 1 || level > 50)
+                return false;
+
+            character.Level = level;
+            context.SaveChanges();
+            return true;
+        }
     }
 }

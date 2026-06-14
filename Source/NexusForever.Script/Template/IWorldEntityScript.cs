@@ -18,5 +18,12 @@ namespace NexusForever.Script.Template
         void OnEnterZone(IWorldEntity entity, uint zone)
         {
         }
+
+        /// <summary>
+        /// Invoked when <see cref="IWorldEntity"/> is activated by <see cref="IPlayer"/>.
+        /// </summary>
+        void OnActivate(IPlayer activator)
+        {
+        }
     }
 }

@@ -9,6 +9,9 @@ namespace NexusForever.Script.Template.Filter
         public Type ScriptType { get; private set; }
         public HashSet<uint> Id { get; set; }
         public HashSet<uint> CreatureId { get; set; }
+        public HashSet<ulong> ActivePropId { get; set; }
+        public string ScriptName { get; set; }
+        public bool IsDefault { get; set; }
 
         #region Dependency Injection
 
@@ -34,6 +37,18 @@ namespace NexusForever.Script.Template.Filter
             if (creatureIdAttribute != null)
                 CreatureId = new HashSet<uint>(creatureIdAttribute.CreatureId);
 
+            ScriptFilterActivePropIdAttribute activePropIdAttribute = ScriptType.GetCustomAttribute<ScriptFilterActivePropIdAttribute>();
+            if (activePropIdAttribute != null)
+                ActivePropId = new HashSet<ulong>(activePropIdAttribute.ActivePropId);
+
+            ScriptFilterScriptNameAttribute scriptNameAttribute = ScriptType.GetCustomAttribute<ScriptFilterScriptNameAttribute>();
+            if (scriptNameAttribute != null)
+                ScriptName = scriptNameAttribute.ScriptName;
+
+            ScriptFilterDefaultAttribute defaultAttribute = ScriptType.GetCustomAttribute<ScriptFilterDefaultAttribute>();
+            bool hasFilters = Id != null || CreatureId != null || ActivePropId != null || ScriptName != null;
+            IsDefault = defaultAttribute != null || !hasFilters;
+
             Attribute dynamicAttribute = ScriptType.GetCustomAttribute(typeof(ScriptFilterDynamicAttribute<>));
             if (dynamicAttribute != null)
             {
@@ -41,6 +56,8 @@ namespace NexusForever.Script.Template.Filter
                 IScriptFilterDynamic dynamicFilter = (IScriptFilterDynamic)serviceProvider.GetRequiredService(dynamicFilterType);
                 dynamicFilter.Filter(this);
             }
+
+            Console.WriteLine($"[DBG] ScriptFilter: {type.Name} hasFilters={hasFilters} IsDefault={IsDefault} CreatureId={CreatureId?.Count ?? 0}");
         }
     }
 }

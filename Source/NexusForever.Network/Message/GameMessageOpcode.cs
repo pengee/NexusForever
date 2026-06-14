@@ -269,6 +269,8 @@ namespace NexusForever.Network.Message
         ClientStatisticsConnection      = 0x023F,
         ClientStatisticsFramerate       = 0x0240,
         ClientPregameKeepAlive          = 0x0241,
+        // TODO: guess -- WildStar is dead, no packet capture possible; confirm via community protocol docs
+        ClientPong                     = 0x0288,
         ClientEncrypted                 = 0x0244,
         ServerCombatLog                 = 0x0247,
         ClientCombatLogDisableOthers    = 0x0248,

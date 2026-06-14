@@ -34,9 +34,11 @@ namespace NexusForever.Game.Abstract.Entity
         /// </summary>
         void InvokeScriptCollection<T>(Action<T> action);
 
-        /// <summary>
-        /// Enqueue <see cref="IGridEntity"/> for removal from the <see cref="IBaseMap"/>.
-        /// </summary>
+        TOut? InvokeScriptCollection<TOut, TIn>(Func<TIn, TOut> func) where TOut : struct;
+
+        void AddVisionEntity(IGridEntity entity);
+        void RemoveVisionEntity(IGridEntity entity);
+        void VisibilityUpdate();
         void RemoveFromMap();
 
         /// <summary>
@@ -69,22 +71,6 @@ namespace NexusForever.Game.Abstract.Entity
         /// </summary>
         void OnRelocate(Vector3 vector);
 
-        /// <summary>
-        /// Returns if <see cref="IGridEntity"/> can see supplied <see cref="IGridEntity"/>.
-        /// </summary>
-        bool CanSeeEntity(IGridEntity entity);
-
-        /// <summary>
-        /// Add tracked <see cref="IGridEntity"/> that is in vision range.
-        /// </summary>
-        void AddVisible(IGridEntity entity);
-
-        /// <summary>
-        /// Remove tracked <see cref="IGridEntity"/> that is no longer in vision range.
-        /// </summary>
-        void RemoveVisible(IGridEntity entity);
-
-        /// <summary>
         /// Return visible <see cref="IGridEntity"/> by supplied guid.
         /// </summary>
         T GetVisible<T>(uint guid) where T : IGridEntity;

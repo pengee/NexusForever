@@ -16,6 +16,7 @@ using NexusForever.Game.Abstract.Map.Instance;
 using NexusForever.Game.Abstract.Map.Lock;
 using NexusForever.Game.Abstract.Matching.Match;
 using NexusForever.Game.Abstract.Matching.Queue;
+using NexusForever.Game.Abstract.Quest;
 using NexusForever.Game.Abstract.Reputation;
 using NexusForever.Game.Achievement;
 using NexusForever.Game.Character;
@@ -233,6 +234,7 @@ namespace NexusForever.Game.Entity
         public IQuestManager QuestManager { get; private set; }
         public ICharacterAchievementManager AchievementManager { get; private set; }
         public ISupplySatchelManager SupplySatchelManager { get; private set; }
+        public ILootManager LootManager { get; private set; }
         public IXpManager XpManager { get; private set; }
         public IReputationManager ReputationManager { get; private set; }
         public IGuildManager GuildManager { get; }
@@ -248,10 +250,12 @@ namespace NexusForever.Game.Entity
         private bool forceSave;
         private UpdateTimer saveTimer = new(SaveDuration);
         private PlayerSaveMask saveMask;
+        private readonly HashSet<uint> buffTargetGuids = new();
 
         private Dictionary<Property, Dictionary<ItemSlot, /*value*/float>> itemProperties = new();
 
         private UpdateTimer relocationTimer = new(TimeSpan.FromSeconds(1));
+        private HashSet<uint> enteredEnterAreaLocations;
 
         #region Dependency Injection
 
@@ -337,6 +341,7 @@ namespace NexusForever.Game.Entity
             PathManager             = new PathManager(this, model);
             TitleManager            = new TitleManager(this, model);
             SpellManager            = new SpellManager(this, model);
+            BuffManager.Load(this, model.Buff);
             PetCustomisationManager = new PetCustomisationManager(this, model);
             KeybindingManager       = new CharacterKeybindingManager(this, model);
             DatacubeManager         = new DatacubeManager(this, model);
@@ -345,6 +350,7 @@ namespace NexusForever.Game.Entity
             QuestManager            = new QuestManager(this, model);
             AchievementManager      = new CharacterAchievementManager(this, model);
             SupplySatchelManager    = new SupplySatchelManager(this, model);
+            LootManager             = new LootManager(this);
             XpManager               = new XpManager(this, model);
             ReputationManager       = new ReputationManager(this, model);
             GuildManager.Initialise(this, model);
@@ -389,6 +395,8 @@ namespace NexusForever.Game.Entity
             CostumeManager.Update(lastTick);
             QuestManager.Update(lastTick);
 
+            CheckEnterAreaObjectives();
+
             relocationTimer.Update(lastTick);
             if (relocationTimer.HasElapsed)
             {
@@ -417,6 +425,48 @@ namespace NexusForever.Game.Entity
                 TimePlayedTotal += timeSinceLastSave;
 
                 Save();
+            }
+        }
+
+        private void CheckEnterAreaObjectives()
+        {
+            // don't run while during initial load or between zones
+            if (IsLoading || Zone == null)
+                return;
+
+            if (enteredEnterAreaLocations == null)
+                enteredEnterAreaLocations = new HashSet<uint>();
+
+            foreach (IQuest quest in QuestManager.GetActiveQuests())
+            {
+                if (quest.State != QuestState.Accepted)
+                    continue;
+
+                foreach (IQuestObjective objective in quest)
+                {
+                    uint worldLocation2Id = objective.ObjectiveInfo.Entry.Data;
+                    if (worldLocation2Id == 0)
+                        continue;
+
+                    // skip if we already fired this location this zone
+                    if (enteredEnterAreaLocations.Contains(worldLocation2Id))
+                        continue;
+
+                    WorldLocation2Entry entry = GameTableManager.Instance.WorldLocation2.GetEntry(worldLocation2Id);
+                    if (entry == null)
+                        continue;
+
+                    // only check locations in the same zone
+                    if (entry.WorldZoneId != Zone.Id)
+                        continue;
+
+                    Vector3 locationPos = new Vector3(entry.Position0, entry.Position1, entry.Position2);
+                    if (Vector3.Distance(Position, locationPos) <= entry.Radius)
+                    {
+                        quest.ObjectiveUpdate(QuestObjectiveType.EnterArea, worldLocation2Id, 1);
+                        enteredEnterAreaLocations.Add(worldLocation2Id);
+                    }
+                }
             }
         }
 
@@ -592,6 +642,7 @@ namespace NexusForever.Game.Entity
             GuildManager.Save(context);
             EntitlementManager.Save(context);
             AppearanceManager.Save(context);
+            BuffManager.Save(context);
         }
 
         protected override IEntityModel BuildEntityModel()
@@ -676,10 +727,15 @@ namespace NexusForever.Game.Entity
 
             if (!relocationTimer.IsTicking)
                 relocationTimer.Resume();
+
+            if (pendingLocalTeleport)
+                OnTeleportToLocal(vector);
         }
 
         protected override void OnZoneUpdate()
         {
+            enteredEnterAreaLocations?.Clear();
+
             if (Zone != null)
             {
                 TextTable tt = GameTableManager.Instance.GetTextTable(Language.English);
@@ -804,13 +860,25 @@ namespace NexusForever.Game.Entity
             return (ItemProficiency)classEntry.StartingItemProficiencies;
         }
 
+        /// <summary>
+        /// Returns if <see cref="IGridEntity"/> can see supplied <see cref="IGridEntity"/>.
+        /// </summary>
+        protected override bool CanSeeEntity(IGridEntity entity)
+        {
+            bool? canSeeMe = entity.InvokeScriptCollection<bool, ICanSeeMeScript>(c => c.CanSeeMe(this));
+            if (canSeeMe != null && !canSeeMe.Value)
+                return false;
+
+            return base.CanSeeEntity(entity);
+        }
+
         public override void OnRemoveFromMap()
         {
             DestroyDependents();
             base.OnRemoveFromMap();
         }
 
-        public override void AddVisible(IGridEntity entity)
+        protected override void AddVisible(IGridEntity entity)
         {
             base.AddVisible(entity);
 
@@ -843,7 +911,7 @@ namespace NexusForever.Game.Entity
             }
         }
 
-        public override void RemoveVisible(IGridEntity entity)
+        protected override void RemoveVisible(IGridEntity entity)
         {
             base.RemoveVisible(entity);
 
@@ -980,6 +1048,15 @@ namespace NexusForever.Game.Entity
             matchingManager.OnLogout(this);
             matchManager.OnLogout(this);
 
+            foreach (uint targetGuid in buffTargetGuids)
+            {
+                IUnitEntity targetEntity = Map?.GetEntity<IUnitEntity>(targetGuid);
+                if (targetEntity != null)
+                    targetEntity.BuffManager.RemoveBuffsByCaster(Guid);
+            }
+
+            buffTargetGuids.Clear();
+
             IsOnline = false;
 
             scriptCollection.Invoke<IPlayerScript>(s => s.OnLogout());
@@ -988,8 +1065,9 @@ namespace NexusForever.Game.Entity
         /// <summary>
         /// Returns if <see cref="IPlayer"/> can teleport.
         /// </summary>
-        public bool CanTeleport() => pendingTeleport == null;
+        public bool CanTeleport() => pendingTeleport == null && !pendingLocalTeleport;
         private PendingTeleport pendingTeleport;
+        private bool pendingLocalTeleport;
 
         /// <summary>
         /// Teleport <see cref="IPlayer"/> to supplied location.
@@ -1082,6 +1160,68 @@ namespace NexusForever.Game.Entity
 
                 log.Trace($"Error {error} occured during teleport for {Name}({CharacterId}), client will be disconnected!");
             }
+        }
+
+        /// <summary>
+        /// Show loading screen for supplied <see cref="IMapPosition"/>.
+        /// </summary>
+        public void ShowLoadingScreen(IMapPosition position)
+        {
+            IsLoading = true;
+
+            Session.EnqueueMessageEncrypted(new ServerChangeWorld
+            {
+                WorldId  = (ushort)position.Info.Entry.Id,
+                Position = new Position(position.Position)
+            });
+        }
+
+        /// <summary>
+        /// Teleport <see cref="IPlayer"/> to supplied location on the same map.
+        /// </summary>
+        public void TeleportToLocal(Vector3 position, bool showLoadingScreen = true, Action<Vector3> callback = null)
+        {
+            if (!CanTeleport())
+            {
+                SendGenericError(GenericError.InstanceTransferPending);
+                return;
+            }
+
+            pendingLocalTeleport = true;
+            localTeleportCallback = callback;
+
+            if (showLoadingScreen)
+                Session.EnqueueMessageEncrypted(new ServerLoadingScreen());
+
+            Relocate(position);
+
+            log.Trace($"Teleporting {Name}({CharacterId}) to local location {position.X}, {position.Y}, {position.Z}.");
+        }
+
+        private Action<Vector3> localTeleportCallback;
+
+        private void OnTeleportToLocal(Vector3 position)
+        {
+            SetControl(null);
+
+            MovementManager.SetPosition(position, false);
+            MovementManager.BroadcastNetworkEntityCommands();
+
+            // local teleport position is broadcast directly to self so the client can update
+            // BroadcastNetworkEntityCommands skips self when not server controlled
+            MovementManager.SendNetworkEntityCommands(Session);
+
+            SetControl(this);
+
+            if (VanityPetGuid != null)
+            {
+                IPetEntity pet = Map?.GetEntity<IPetEntity>(VanityPetGuid.Value);
+                pet?.Relocate(position);
+            }
+
+            localTeleportCallback?.Invoke(position);
+            localTeleportCallback = null;
+            pendingLocalTeleport = false;
         }
 
         /// <summary>
@@ -1499,6 +1639,16 @@ namespace NexusForever.Game.Entity
         {
             DeathState = null;
             RemoveControlUnit();
+        }
+
+        public void TrackBuffTarget(uint targetGuid)
+        {
+            buffTargetGuids.Add(targetGuid);
+        }
+
+        public IEnumerable<uint> GetBuffTargets()
+        {
+            return buffTargetGuids;
         }
     }
 }

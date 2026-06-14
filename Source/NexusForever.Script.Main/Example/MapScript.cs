@@ -14,9 +14,9 @@ namespace NexusForever.Script.Main.Example
         /// <summary>
         /// Invoked when <see cref="IScript"/> is loaded.
         /// </summary>
-        public void OnLoad(IBaseMap owner)
+        public void OnLoad(IBaseMap entityOwner)
         {
-            this.owner = owner;
+            this.owner = entityOwner;
         }
 
         /// <summary>

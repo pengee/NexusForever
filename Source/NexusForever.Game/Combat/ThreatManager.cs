@@ -180,5 +180,22 @@ namespace NexusForever.Game.Combat
         {
             return GetEnumerator();
         }
+
+        public void TransferThreat(IUnitEntity from, IUnitEntity to, float pct)
+        {
+            if (pct <= 0f)
+                return;
+
+            IHostileEntity fromHostile = GetHostile(from.Guid);
+            if (fromHostile == null)
+                return;
+
+            int threatToTransfer = (int)(fromHostile.Threat * pct);
+            if (threatToTransfer == 0)
+                return;
+
+            UpdateThreat(from, -threatToTransfer);
+            UpdateThreat(to, threatToTransfer);
+        }
     }
 }

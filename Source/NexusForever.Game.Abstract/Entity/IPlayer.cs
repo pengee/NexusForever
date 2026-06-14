@@ -83,6 +83,7 @@ namespace NexusForever.Game.Abstract.Entity
         IQuestManager QuestManager { get; }
         ICharacterAchievementManager AchievementManager { get; }
         ISupplySatchelManager SupplySatchelManager { get; }
+        ILootManager LootManager { get; }
         IXpManager XpManager { get; }
         IReputationManager ReputationManager { get; }
         IGuildManager GuildManager { get; }
@@ -139,6 +140,11 @@ namespace NexusForever.Game.Abstract.Entity
         /// Teleport <see cref="IPlayer"/> to supplied location.
         /// </summary>
         void TeleportTo(IMapPosition mapPosition, TeleportReason reason = TeleportReason.Relocate);
+
+        /// <summary>
+        /// Teleport <see cref="IPlayer"/> to supplied position on the same map.
+        /// </summary>
+        void TeleportToLocal(Vector3 position, bool showLoadingScreen = true, Action<Vector3> callback = null);
 
         /// <summary>
         /// Invoked when <see cref="IPlayer"/> teleport fails.
@@ -204,5 +210,8 @@ namespace NexusForever.Game.Abstract.Entity
         /// Remove a <see cref="Property"/> modifier by a item that is currently affecting this <see cref="IPlayer"/>.
         /// </summary>
         void RemoveItemProperty(Property property, ItemSlot itemSlot);
+
+        void TrackBuffTarget(uint targetGuid);
+        IEnumerable<uint> GetBuffTargets();
     }
 }

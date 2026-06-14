@@ -149,7 +149,7 @@ namespace NexusForever.Game
         /// </summary>
         public ImmutableList<uint> GetTargetGroupsForCreatureId(uint creatureId)
         {
-            return creatureAssociatedTargetGroups.TryGetValue(creatureId, out ImmutableList<uint> entries) ? entries : null;
+            return creatureAssociatedTargetGroups.TryGetValue(creatureId, out ImmutableList<uint> entries) ? entries : ImmutableList<uint>.Empty;
         }
 
         /// <summary>

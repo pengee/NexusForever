@@ -48,8 +48,8 @@ namespace NexusForever.Game.Abstract.Entity
         void SetSpellCooldown(uint spell4Id, double cooldown);
 
         void ResetAllSpellCooldowns();
-        double GetGlobalSpellCooldown();
-        void SetGlobalSpellCooldown(double cooldown);
+        double GetGlobalSpellCooldown(uint gcdGroup);
+        void SetGlobalSpellCooldown(uint gcdGroup, double cooldown);
 
         /// <summary>
         /// Return <see cref="IActionSet"/> at supplied index.
@@ -60,6 +60,8 @@ namespace NexusForever.Game.Abstract.Entity
         /// Update active <see cref="IActionSet"/> with supplied index, returned <see cref="SpecError"/> is sent to the client.
         /// </summary>
         SpecError SetActiveActionSet(byte value);
+
+        void RemoveSpell(uint spell4BaseId);
 
         void SendInitialPackets();
         void SendServerAbilityPoints();

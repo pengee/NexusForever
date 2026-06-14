@@ -20,9 +20,9 @@ namespace NexusForever.Script.Instance
         /// <summary>
         /// Invoked when <see cref="IContentPvpMapInstance"/> is loaded.
         /// </summary>
-        public void OnLoad(IContentPvpMapInstance owner)
+        public void OnLoad(IContentPvpMapInstance entityOwner)
         {
-            map            = owner;
+            map            = entityOwner;
             publicEvent    = map.PublicEventManager.CreateEvent(PublicEventId);
             publicSubEvent = map.PublicEventManager.CreateEvent(PublicSubEventId);
         }

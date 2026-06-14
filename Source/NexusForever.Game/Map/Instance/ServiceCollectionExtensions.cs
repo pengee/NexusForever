@@ -11,10 +11,12 @@ namespace NexusForever.Game.Map.Instance
             sc.AddTransient<ContentInstancedMap<IContentMapInstance>>();
             sc.AddTransient<ContentInstancedMap<IContentPvpMapInstance>>();
             sc.AddTransient<ResidenceInstancedMap>();
+            sc.AddTransient<TutorialInstancedMap>();
 
             sc.AddTransientFactory<IContentMapInstance, ContentMapInstance>();
             sc.AddTransientFactory<IContentPvpMapInstance, ContentPvpMapInstance>();
             sc.AddTransientFactory<IResidenceMapInstance, ResidenceMapInstance>();
+            sc.AddTransientFactory<ITutorialMapInstance, TutorialMapInstance>();
         }
     }
 }

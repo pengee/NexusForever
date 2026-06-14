@@ -14,9 +14,9 @@ namespace NexusForever.Script.Instance.Arena.TheSlaughterdome
         /// <summary>
         /// Invoked when <see cref="IScript"/> is loaded.
         /// </summary>
-        public void OnLoad(IPublicEvent owner)
+        public void OnLoad(IPublicEvent entityOwner)
         {
-            publicEvent = owner;
+            publicEvent = entityOwner;
             publicEvent.SetPhase(PublicEventPhase.Preperation);
         }
 

@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using NexusForever.Game.Abstract.Entity;
 using NexusForever.Game.Abstract.Map;
@@ -181,6 +183,13 @@ namespace NexusForever.Game.Map.Instance
         {
             return instances.TryGetValue(instanceId, out T map) ? map : default;
         }
+
+        /// <summary>
+        /// Return all instances for this map.
+        /// </summary>
+        public IEnumerable<T> Instances => instances.Values;
+
+        IEnumerable<IMapInstance> IInstancedMap.AllInstances => instances.Values.Cast<IMapInstance>();
 
         /// <summary>
         /// Return a string containing debug information about the map.

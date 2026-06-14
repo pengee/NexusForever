@@ -1,6 +1,7 @@
 using NexusForever.Database.World.Model;
 using NexusForever.Game.Abstract.Entity;
 using NexusForever.Game.Abstract.Entity.Movement;
+using NexusForever.Game.Spell;
 using NexusForever.Game.Static.Entity;
 using NexusForever.Network.World.Entity;
 using NexusForever.Network.World.Entity.Model;
@@ -10,8 +11,6 @@ namespace NexusForever.Game.Entity
     public class SimpleEntity : UnitEntity, ISimpleEntity
     {
         public override EntityType Type => EntityType.Simple;
-
-        public byte QuestChecklistIdx { get; private set; }
 
         #region Dependency Injection
 
@@ -39,15 +38,17 @@ namespace NexusForever.Game.Entity
 
         public override void OnActivate(IPlayer activator)
         {
-            if (CreatureEntry.DatacubeId != 0u)
+            if (CreatureEntry != null && CreatureEntry.DatacubeId != 0u)
                 activator.DatacubeManager.AddDatacube((ushort)CreatureEntry.DatacubeId, int.MaxValue);
+
+            base.OnActivate(activator);
         }
 
         public override void OnActivateCast(IPlayer activator)
         {
             uint progress = (uint)(1 << QuestChecklistIdx);
 
-            if (CreatureEntry.DatacubeId != 0u)
+            if (CreatureEntry != null && CreatureEntry.DatacubeId != 0u)
             {
                 IDatacube datacube = activator.DatacubeManager.GetDatacube((ushort)CreatureEntry.DatacubeId, DatacubeType.Datacube);
                 if (datacube == null)
@@ -59,7 +60,7 @@ namespace NexusForever.Game.Entity
                 }
             }
 
-            if (CreatureEntry.DatacubeVolumeId != 0u)
+            if (CreatureEntry != null && CreatureEntry.DatacubeVolumeId != 0u)
             {
                 IDatacube datacube = activator.DatacubeManager.GetDatacube((ushort)CreatureEntry.DatacubeVolumeId, DatacubeType.Journal);
                 if (datacube == null)
@@ -72,6 +73,9 @@ namespace NexusForever.Game.Entity
             }
 
             //TODO: cast "116,Generic Quest Spell - Activating - Activate - Tier 1" by 0x07FD
+            //activator.CastSpell(116, new SpellParameters {PrimaryTargetId = activator.Guid}); //does nothing
+
+            base.OnActivateCast(activator);
         }
     }
 }

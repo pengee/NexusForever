@@ -12,9 +12,9 @@ namespace NexusForever.Script.Main.Example
         /// <summary>
         /// Invoked when <see cref="IScript"/> is loaded.
         /// </summary>
-        public void OnLoad(IPlayer owner)
+        public void OnLoad(IPlayer entityOwner)
         {
-            this.owner = owner;
+            this.owner = entityOwner;
         }
 
         /// <summary>

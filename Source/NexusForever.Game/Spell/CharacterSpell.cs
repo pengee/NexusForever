@@ -174,6 +174,15 @@ namespace NexusForever.Game.Spell
             SendChargeUpdate();
         }
 
+        public void ModifyCharges(int amount)
+        {
+            if (MaxAbilityCharges == 0u)
+                return;
+
+            AbilityCharges = (uint)Math.Clamp((int)AbilityCharges + amount, 0, (int)MaxAbilityCharges);
+            SendChargeUpdate();
+        }
+
         private void SendChargeUpdate()
         {
             Owner.Session.EnqueueMessageEncrypted(new ServerSpellAbilityCharges

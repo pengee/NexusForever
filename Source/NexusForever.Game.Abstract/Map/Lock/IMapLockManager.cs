@@ -1,6 +1,7 @@
 ﻿using NexusForever.Game.Abstract.Housing;
 using NexusForever.Game.Abstract.Matching.Match;
 using NexusForever.Game.Map.Lock;
+using NexusForever.Game.Static.Reputation;
 
 namespace NexusForever.Game.Abstract.Map.Lock
 {
@@ -32,5 +33,10 @@ namespace NexusForever.Game.Abstract.Map.Lock
         /// Return <see cref="IResidenceMapLock"/> for supplied <see cref="IResidence"/>.
         /// </summary>
         IResidenceMapLock GetResidenceLock(IResidence residence);
+
+        /// <summary>
+        /// Return the <see cref="IMapLock"/> for the tutorial world for the supplied <see cref="Faction"/>.
+        /// </summary>
+        IMapLock GetTutorialLock(Faction faction);
     }
 }

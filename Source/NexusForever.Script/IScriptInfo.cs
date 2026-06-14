@@ -8,6 +8,7 @@ namespace NexusForever.Script
     {
         string Name { get; }
         public Type Type { get; }
+        bool IsDefault { get; }
 
         /// <summary>
         /// Initialise <see cref="IScriptInfo"/> with supplied <see cref="IScript"/> type.

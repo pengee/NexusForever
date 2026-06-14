@@ -32,5 +32,18 @@ namespace NexusForever.MapGenerator
 
         [Option("gridY")]
         public byte? GridY { get; set; }
+
+        // diagnostic / entity export options
+        [Option("hex", Default = false,
+            HelpText = "Dump hex of CellProp sub-chunks for a single grid cell (use with --worldId/--gridX/--gridY).")]
+        public bool Hex { get; set; }
+
+        [Option("dump-world", Default = false,
+            HelpText = "Dump all world IDs, names, and asset paths from World.tbl.")]
+        public bool DumpWorld { get; set; }
+
+        [Option("list-grids", Default = false,
+            HelpText = "List all .area grid files found for a given world (use with --worldId).")]
+        public bool ListGrids { get; set; }
     }
 }

@@ -1,22 +1,20 @@
 ﻿using NexusForever.Game.Abstract.Entity;
 using NexusForever.Game.Abstract.Map;
 using NexusForever.Game.Static.Entity.Movement.Command.Mode;
-using NexusForever.Game.Static.Entity.Movement.Spline;
 using NexusForever.Script.Template;
 using NexusForever.Script.Template.Filter;
 using NexusForever.Script.Template.Filter.Dynamic;
 
 namespace NexusForever.Script.Main.AI
 {
-    [ScriptFilterDynamic<IScriptFilterDynamicEntitySpline>]
-    //[ScriptFilterIgnore]
+    [ScriptFilterDefault, ScriptFilterDynamic<IScriptFilterDynamicEntitySpline>]
     public class SplineAI : IWorldEntityScript, IOwnedScript<ICreatureEntity>
     {
         private ICreatureEntity owner;
 
-        public void OnLoad(ICreatureEntity owner)
+        public void OnLoad(ICreatureEntity entityOwner)
         {
-            this.owner = owner;
+            owner = entityOwner;
         }
 
         /// <summary>
@@ -27,8 +25,8 @@ namespace NexusForever.Script.Main.AI
             if (owner.Spline == null)
                 return;
 
-            // TODO: Rawaho, handle negative spline speed and additional modes...
-            if (owner.Spline.Mode > SplineMode.CyclicReverse || owner.Spline.Speed == -1)
+            // TODO: Handle negative spline speed...
+            if (owner.Spline.Speed == -1)
                 return;
 
             owner.MovementManager.SetMode(ModeType.Walk);

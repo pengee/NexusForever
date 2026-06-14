@@ -47,5 +47,10 @@ namespace NexusForever.Game.Abstract.Combat
         /// Send threat list to supplied <see cref="IGameSession"/>.
         /// </summary>
         void SendThreatList(IGameSession session);
+
+        /// <summary>
+        /// Transfer a percentage of threat from one entity to another.
+        /// </summary>
+        void TransferThreat(IUnitEntity from, IUnitEntity to, float pct);
     }
 }

@@ -9,7 +9,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NexusForever.Game.Abstract\NexusForever.Game.Abstract.csproj" />
+    <ProjectReference Include="..\NexusForever.Game\NexusForever.Game.csproj" />
     <ProjectReference Include="..\NexusForever.Script\NexusForever.Script.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Tutorial\Script\Part3\" />
   </ItemGroup>
 
 

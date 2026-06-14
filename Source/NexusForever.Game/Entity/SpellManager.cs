@@ -49,7 +49,7 @@ namespace NexusForever.Game.Entity
 
         private readonly Dictionary<uint /*spell4BaseId*/, ICharacterSpell> spells = new();
         private readonly Dictionary<uint /*spell4Id*/, double /*cooldown*/> spellCooldowns = new();
-        private double globalSpellCooldown;
+        private readonly Dictionary<uint /*gcdGroup*/, double /*cooldown*/> globalSpellCooldowns = new();
 
         private readonly IActionSet[] actionSets = new ActionSet[ActionSet.MaxActionSets];
 
@@ -123,16 +123,15 @@ namespace NexusForever.Game.Entity
 
         public void Update(double lastTick)
         {
-            // update global cooldown
-            if (globalSpellCooldown > 0d)
+            foreach ((uint gcdGroup, double cooldown) in globalSpellCooldowns.ToArray())
             {
-                if (globalSpellCooldown - lastTick <= 0d)
+                if (cooldown - lastTick <= 0d)
                 {
-                    globalSpellCooldown = 0d;
-                    log.Trace("Global spell cooldown has reset.");
+                    globalSpellCooldowns.Remove(gcdGroup);
+                    log.Trace($"Global spell cooldown for group {gcdGroup} has reset.");
                 }
                 else
-                    globalSpellCooldown -= lastTick;
+                    globalSpellCooldowns[gcdGroup] = cooldown - lastTick;
             }
 
             // update spell cooldowns
@@ -218,6 +217,24 @@ namespace NexusForever.Game.Entity
         /// <summary>
         /// Update existing <see cref="ICharacterSpell"/> with supplied tier. The base tier will be updated if no action set index is supplied.
         /// </summary>
+        public void RemoveSpell(uint spell4BaseId)
+        {
+            if (!spells.ContainsKey(spell4BaseId))
+                return;
+
+            spells.Remove(spell4BaseId);
+
+            if (!player.IsLoading)
+            {
+                player.Session.EnqueueMessageEncrypted(new ServerSpellUpdate
+                {
+                    Spell4BaseId = spell4BaseId,
+                    TierIndex    = 0,
+                    Activated    = false
+                });
+            }
+        }
+
         public void UpdateSpell(uint spell4BaseId, byte tier, byte? actionSetIndex)
         {
             ISpellBaseInfo spellBaseInfo = GlobalSpellManager.Instance.GetSpellBaseInfo(spell4BaseId);
@@ -320,15 +337,22 @@ namespace NexusForever.Game.Entity
                 SetSpellCooldown(spell4Id, 0d);
         }
 
-        public double GetGlobalSpellCooldown()
+        public double GetGlobalSpellCooldown(uint gcdGroup)
         {
-            return globalSpellCooldown;
+            return globalSpellCooldowns.TryGetValue(gcdGroup, out double cooldown) ? cooldown : 0d;
         }
 
-        public void SetGlobalSpellCooldown(double cooldown)
+        public void SetGlobalSpellCooldown(uint gcdGroup, double cooldown)
         {
-            globalSpellCooldown = cooldown;
-            log.Trace($"Global spell cooldown set to {cooldown} seconds.");
+            if (cooldown < 0d)
+                throw new ArgumentOutOfRangeException();
+
+            if (globalSpellCooldowns.ContainsKey(gcdGroup))
+                globalSpellCooldowns[gcdGroup] = cooldown;
+            else
+                globalSpellCooldowns.Add(gcdGroup, cooldown);
+
+            log.Trace($"Global spell cooldown for group {gcdGroup} set to {cooldown} seconds.");
         }
 
         /// <summary>
